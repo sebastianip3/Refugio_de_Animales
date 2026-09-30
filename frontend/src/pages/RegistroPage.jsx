@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function RegistroPage() {
+function RegistroPage({ onRegistro }) {
   const [formulario, setFormulario] = useState({
     nombre: "",
     correo: "",
@@ -18,10 +18,12 @@ function RegistroPage() {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    console.log(formulario);
-  };
+  console.log(formulario);
+
+  onRegistro();
+};
 
   return (
     <main>
