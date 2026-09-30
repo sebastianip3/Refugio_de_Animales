@@ -1,22 +1,8 @@
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
-import prisma from '../config/prisma.js';
-import {
-  adopcionSchema,
-  updateAdopcionSchema,
-  ESTADOS_ADOPCION,
-  ESTADOS_EN_PROCESO,
-} from '../schema/adopcion.schema.js';
-
-// Serializable evita que dos solicitudes simultáneas pasen la verificación a la vez
-const TX_OPCIONES = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
-
-class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
+import * as adopcionService from '../services/adopcion.service.js';
+import { AppError } from '../utils/app-error.js';
+import { adopcionSchema, updateAdopcionSchema, ESTADOS_ADOPCION } from '../schema/adopcion.schema.js';
 
 function parseId(value) {
   const id = Number(value);
@@ -24,7 +10,7 @@ function parseId(value) {
 }
 
 function manejarError(res, error) {
-  if (error instanceof HttpError) return res.status(error.status).json({ message: error.message });
+  if (error instanceof AppError) return res.status(error.status).json({ message: error.message });
   if (error instanceof ZodError) {
     return res.status(400).json({
       message: 'Datos inválidos',
@@ -46,22 +32,18 @@ function manejarError(res, error) {
 export async function listarAdopciones(req, res) {
   try {
     const { animalId, estado } = req.query;
-    const where = {};
+    const filtros = {};
 
     if (estado) {
       if (!ESTADOS_ADOPCION.includes(estado)) return res.status(400).json({ message: 'Estado inválido' });
-      where.estado = estado;
+      filtros.estado = estado;
     }
     if (animalId) {
-      where.animalId = parseId(animalId);
-      if (!where.animalId) return res.status(400).json({ message: 'animalId inválido' });
+      filtros.animalId = parseId(animalId);
+      if (!filtros.animalId) return res.status(400).json({ message: 'animalId inválido' });
     }
 
-    const adopciones = await prisma.adopcion.findMany({
-      where,
-      include: { animal: { include: { especie: true } } },
-      orderBy: { fechaSolicitud: 'desc' },
-    });
+    const adopciones = await adopcionService.listarAdopciones(filtros);
     res.json(adopciones);
   } catch (error) {
     manejarError(res, error);
@@ -73,10 +55,7 @@ export async function obtenerAdopcion(req, res) {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
-    const adopcion = await prisma.adopcion.findUniqueOrThrow({
-      where: { id },
-      include: { animal: { include: { especie: true } } },
-    });
+    const adopcion = await adopcionService.obtenerAdopcion(id);
     res.json(adopcion);
   } catch (error) {
     manejarError(res, error);
@@ -86,54 +65,20 @@ export async function obtenerAdopcion(req, res) {
 export async function crearAdopcion(req, res) {
   try {
     const data = adopcionSchema.parse(req.body);
-
-    const adopcion = await prisma.$transaction(async (tx) => {
-      const animal = await tx.animal.findUnique({ where: { id: data.animalId } });
-      if (!animal) throw new HttpError(404, 'Animal no encontrado');
-      if (animal.estado === 'ADOPTADO') throw new HttpError(409, 'El animal ya fue adoptado');
-
-      const enProceso = await tx.adopcion.findFirst({
-        where: { animalId: data.animalId, estado: { in: ESTADOS_EN_PROCESO } },
-      });
-      if (enProceso) throw new HttpError(409, 'El animal ya tiene una adopción en proceso');
-
-      return tx.adopcion.create({ data, include: { animal: true } });
-    }, TX_OPCIONES);
-
+    const adopcion = await adopcionService.crearAdopcion(data);
     res.status(201).json(adopcion);
   } catch (error) {
     manejarError(res, error);
   }
 }
 
-// Solo se puede cambiar el estado mientras la adopción está en proceso.
-// Al aprobarla, el animal pasa a ADOPTADO y se registra su egreso.
 export async function actualizarAdopcion(req, res) {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
     const data = updateAdopcionSchema.parse(req.body);
-
-    const adopcion = await prisma.$transaction(async (tx) => {
-      const actual = await tx.adopcion.findUniqueOrThrow({ where: { id } });
-
-      if (data.estado && data.estado !== actual.estado) {
-        if (!ESTADOS_EN_PROCESO.includes(actual.estado)) {
-          throw new HttpError(409, `La adopción ya está cerrada (${actual.estado}) y no puede cambiar de estado`);
-        }
-
-        if (data.estado === 'APROBADA') {
-          await tx.animal.update({
-            where: { id: actual.animalId },
-            data: { estado: 'ADOPTADO', fechaEgreso: new Date(), motivoEgreso: 'Adoptado' },
-          });
-        }
-      }
-
-      return tx.adopcion.update({ where: { id }, data, include: { animal: true } });
-    }, TX_OPCIONES);
-
+    const adopcion = await adopcionService.actualizarAdopcion(id, data);
     res.json(adopcion);
   } catch (error) {
     manejarError(res, error);

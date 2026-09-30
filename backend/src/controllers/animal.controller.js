@@ -1,6 +1,7 @@
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
-import prisma from '../config/prisma.js';
+import * as animalService from '../services/animal.service.js';
+import { AppError } from '../utils/app-error.js';
 import { animalSchema, updateAnimalSchema, ESTADOS_ANIMAL } from '../schema/animal.schema.js';
 
 function parseId(value) {
@@ -9,6 +10,7 @@ function parseId(value) {
 }
 
 function manejarError(res, error) {
+  if (error instanceof AppError) return res.status(error.status).json({ message: error.message });
   if (error instanceof ZodError) {
     return res.status(400).json({
       message: 'Datos inválidos',
@@ -29,22 +31,18 @@ function manejarError(res, error) {
 export async function listarAnimales(req, res) {
   try {
     const { estado, especieId } = req.query;
-    const where = {};
+    const filtros = {};
 
     if (estado) {
       if (!ESTADOS_ANIMAL.includes(estado)) return res.status(400).json({ message: 'Estado inválido' });
-      where.estado = estado;
+      filtros.estado = estado;
     }
     if (especieId) {
-      where.especieId = parseId(especieId);
-      if (!where.especieId) return res.status(400).json({ message: 'especieId inválido' });
+      filtros.especieId = parseId(especieId);
+      if (!filtros.especieId) return res.status(400).json({ message: 'especieId inválido' });
     }
 
-    const animales = await prisma.animal.findMany({
-      where,
-      include: { especie: true },
-      orderBy: { fechaIngreso: 'desc' },
-    });
+    const animales = await animalService.listarAnimales(filtros);
     res.json(animales);
   } catch (error) {
     manejarError(res, error);
@@ -56,7 +54,7 @@ export async function obtenerAnimal(req, res) {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
-    const animal = await prisma.animal.findUniqueOrThrow({ where: { id }, include: { especie: true } });
+    const animal = await animalService.obtenerAnimal(id);
     res.json(animal);
   } catch (error) {
     manejarError(res, error);
@@ -66,7 +64,7 @@ export async function obtenerAnimal(req, res) {
 export async function crearAnimal(req, res) {
   try {
     const data = animalSchema.parse(req.body);
-    const animal = await prisma.animal.create({ data, include: { especie: true } });
+    const animal = await animalService.crearAnimal(data);
     res.status(201).json(animal);
   } catch (error) {
     manejarError(res, error);
@@ -79,7 +77,7 @@ export async function actualizarAnimal(req, res) {
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
     const data = updateAnimalSchema.parse(req.body);
-    const animal = await prisma.animal.update({ where: { id }, data, include: { especie: true } });
+    const animal = await animalService.actualizarAnimal(id, data);
     res.json(animal);
   } catch (error) {
     manejarError(res, error);
@@ -91,7 +89,7 @@ export async function eliminarAnimal(req, res) {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
-    await prisma.animal.delete({ where: { id } });
+    await animalService.eliminarAnimal(id);
     res.status(204).end();
   } catch (error) {
     manejarError(res, error);
