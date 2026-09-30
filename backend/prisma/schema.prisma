@@ -7,20 +7,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Sexo {
+  MACHO
+  HEMBRA
+  DESCONOCIDO
+}
+
+enum EstadoAnimal {
+  EN_EVALUACION
+  CUARENTENA
+  EN_TRATAMIENTO
+  EN_ADOPCION
+  ADOPTADO
+  OTRO
+}
+
+model Especie {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique @db.VarChar(80)
+  descripcion String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  animales Animal[]
+
+  @@map("especies")
+}
+
+// Varios campos opcionales: hay animales que llegan sin antecedentes.
 model Animal {
   id            Int          @id @default(autoincrement())
-  nombre        String?
-  especie       String
-  edadEstimada  String? 
-  sexo          String?
+  nombre        String?      @db.VarChar(100)
+  edadEstimada  Int?
+  sexo          Sexo         @default(DESCONOCIDO)
   peso          Float?
-  estadoGeneral String?
-  fotografiaUrl String?
-  tieneChip     Boolean?
-  observaciones String?
+  estadoGeneral String?      @db.Text
+  fotografiaUrl String?      @db.VarChar(500)
+  estado        EstadoAnimal @default(EN_EVALUACION)
+  observaciones String?      @db.Text
   fechaIngreso  DateTime     @default(now())
-  fechaEgreso   DateTime?
-  motivoEgreso  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  especieId Int
+  especie   Especie @relation(fields: [especieId], references: [id], onDelete: Restrict)
+
+  @@index([estado])
+  @@map("animales")
 }
