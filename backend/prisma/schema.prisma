@@ -44,14 +44,44 @@ model Animal {
   estadoGeneral String?      @db.Text
   fotografiaUrl String?      @db.VarChar(500)
   estado        EstadoAnimal @default(EN_EVALUACION)
+  tieneChip     Boolean?
+  numeroChip    String?      @db.VarChar(50)
   observaciones String?      @db.Text
   fechaIngreso  DateTime     @default(now())
+  fechaEgreso   DateTime?
+  motivoEgreso  String?      @db.VarChar(255)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
   especieId Int
   especie   Especie @relation(fields: [especieId], references: [id], onDelete: Restrict)
 
+  adopciones Adopcion[]
+
   @@index([estado])
   @@map("animales")
+}
+
+model Adopcion {
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  rut            String
+  email          String
+  telefono       String
+  direccion      String
+  comuna         String
+  tipoVivienda   String?
+  otrasMascotas  String?
+  motivo         String?
+  estado         String   @default("PENDIENTE")
+  observaciones  String?
+  fechaSolicitud DateTime @default(now())
+
+  animalId Int
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("adopciones")
 }
