@@ -1,11 +1,7 @@
-function App() {
-  return (
-    <main>
-      <h1>Refugio de Animales</h1>
+import RegistroPage from "./pages/RegistroPage.jsx";
 
-      <p>Sistema de gestión del refugio.</p>
-    </main>
-  );
+function App() {
+  return <RegistroPage />;
 }
 
 export default App;
