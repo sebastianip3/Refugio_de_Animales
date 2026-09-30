@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import router from './src/routes/index.routes.js';
-import { errorHandler } from './src/middlewares/error.middleware.js';
 import prisma from './src/config/prisma.js';
 
 const app = express();
@@ -14,8 +13,6 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 app.use('/api', router);
-
-app.use(errorHandler);
 
 async function bootstrap() {
   try {
