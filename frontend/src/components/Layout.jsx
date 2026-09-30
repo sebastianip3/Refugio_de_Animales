@@ -1,4 +1,15 @@
-function Layout({ children }) {
+const SECCIONES = [
+  { id: "inicio", label: "Inicio" },
+  { id: "animales", label: "Animales" },
+  { id: "adopciones", label: "Adopciones" },
+  { id: "historial", label: "Historial clínico" },
+  { id: "insumos", label: "Insumos" },
+  { id: "voluntariado", label: "Voluntariado" },
+  { id: "trabajadores", label: "Trabajadores" },
+  { id: "esterilizacion", label: "Esterilización" },
+];
+
+function Layout({ children, paginaActual, onNavegar }) {
   return (
     <div>
       <header>
@@ -11,14 +22,20 @@ function Layout({ children }) {
 
           <nav>
             <ul>
-              <li>Inicio</li>
-              <li>Animales</li>
-              <li>Adopciones</li>
-              <li>Historial clínico</li>
-              <li>Insumos</li>
-              <li>Voluntariado</li>
-              <li>Trabajadores</li>
-              <li>Esterilización</li>
+              {SECCIONES.map((seccion) => (
+                <li key={seccion.id}>
+                  <a
+                    href={`#${seccion.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavegar(seccion.id);
+                    }}
+                    style={{ fontWeight: paginaActual === seccion.id ? "bold" : "normal" }}
+                  >
+                    {seccion.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </nav>
         </aside>
