@@ -22,6 +22,15 @@ enum EstadoAnimal {
   OTRO
 }
 
+// PENDIENTE y EN_REVISION cuentan como "adopción en proceso"
+enum EstadoAdopcion {
+  PENDIENTE
+  EN_REVISION
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
 model Especie {
   id          Int      @id @default(autoincrement())
   nombre      String   @unique @db.VarChar(80)
@@ -63,7 +72,7 @@ model Animal {
 }
 
 model Adopcion {
-  id             Int      @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   nombre         String
   rut            String
   email          String
@@ -73,9 +82,9 @@ model Adopcion {
   tipoVivienda   String?
   otrasMascotas  String?
   motivo         String?
-  estado         String   @default("PENDIENTE")
+  estado         EstadoAdopcion @default(PENDIENTE)
   observaciones  String?
-  fechaSolicitud DateTime @default(now())
+  fechaSolicitud DateTime       @default(now())
 
   animalId Int
   animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
@@ -83,5 +92,6 @@ model Adopcion {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([animalId, estado])
   @@map("adopciones")
 }
