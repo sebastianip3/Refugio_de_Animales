@@ -1,112 +1,57 @@
-import { useState } from "react";
+// frontend/src/pages/RegistroPage.jsx
+import React from 'react';
+import { Container, Box, Typography, Button, Card, CardContent, TextField } from '@mui/material';
 
-function RegistroPage({ onRegistro }) {
-  const [formulario, setFormulario] = useState({
-    nombre: "",
-    correo: "",
-    contrasena: "",
-    confirmarContrasena: "",
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    setFormulario({
-      ...formulario,
-      [name]: value,
-    });
-  };
-
-  const handleSubmit = (e) => {
-  e.preventDefault();
-
-  console.log(formulario);
-
-  onRegistro();
-};
-
+function RegistroPage() {
   return (
-    <main>
-      <h1>Refugio de Animales</h1>
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#f4f6f8', display: 'flex', alignItems: 'center' }}>
+      <Container maxWidth="sm">
+        <Card sx={{ p: 4, borderRadius: 3, boxShadow: 4 }}>
+          <CardContent sx={{ textAlign: 'center' }}>
+            
+            <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#2c3e50', fontWeight: 'bold' }}>
+              Crear Cuenta
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+              Únete a nuestra comunidad y ayuda a los animales del refugio.
+            </Typography>
 
-      <h2>Crear cuenta</h2>
+            <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <TextField 
+                label="Nombre Completo" 
+                variant="outlined" 
+                fullWidth 
+                placeholder="Ej. Juan Pérez"
+              />
+              <TextField 
+                label="Correo Electrónico" 
+                type="email" 
+                variant="outlined" 
+                fullWidth 
+                placeholder="ejemplo@correo.com"
+              />
+              <TextField 
+                label="Contraseña" 
+                type="password" 
+                variant="outlined" 
+                fullWidth 
+                placeholder="Crea una contraseña segura"
+              />
+              
+              <Button 
+                variant="contained" 
+                size="large" 
+                sx={{ mt: 2, backgroundColor: '#3498db', fontWeight: 'bold', py: 1.5, borderRadius: 2 }}
+                disableElevation
+              >
+                Registrarse
+              </Button>
+            </Box>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="nombre">Nombre</label>
-          <br />
-
-          <input
-            type="text"
-            id="nombre"
-            name="nombre"
-            value={formulario.nombre}
-            onChange={handleChange}
-            placeholder="Ingrese su nombre"
-            required
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label htmlFor="correo">Correo electrónico</label>
-          <br />
-
-          <input
-            type="email"
-            id="correo"
-            name="correo"
-            value={formulario.correo}
-            onChange={handleChange}
-            placeholder="correo@ejemplo.com"
-            required
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label htmlFor="contrasena">Contraseña</label>
-          <br />
-
-          <input
-            type="password"
-            id="contrasena"
-            name="contrasena"
-            value={formulario.contrasena}
-            onChange={handleChange}
-            placeholder="Ingrese una contraseña"
-            required
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label htmlFor="confirmarContrasena">
-            Confirmar contraseña
-          </label>
-          <br />
-
-          <input
-            type="password"
-            id="confirmarContrasena"
-            name="confirmarContrasena"
-            value={formulario.confirmarContrasena}
-            onChange={handleChange}
-            placeholder="Repita su contraseña"
-            required
-          />
-        </div>
-
-        <br />
-
-        <button type="submit">
-          Registrarse
-        </button>
-      </form>
-    </main>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   );
 }
 
