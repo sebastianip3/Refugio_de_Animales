@@ -2,12 +2,12 @@ import { z } from 'zod';
 
 const animalSchema = z.object({
   nombre: z.string().optional(),
-  especie: z.string().max(100),
+  rut: z.string().max(100),
   edadEstimada: z.string().optional(),
   sexo: z.string().optional(),
   peso: z.number().int().optional(),
   estadoGeneral: z.string().optional(),
-  fotografiaUrl: z.string().optional().max(250),
+  fotografiaUrl: z.string().optional().max(200),
   tieneChip: z.boolean().optional(),
   numeroChip: z.string().optional(),
   observaciones: z.string().optional(),
