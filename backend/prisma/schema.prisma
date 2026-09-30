@@ -7,47 +7,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Sexo {
+  MACHO
+  HEMBRA
+  DESCONOCIDO
+}
+
+enum EstadoAnimal {
+  EN_EVALUACION
+  CUARENTENA
+  EN_TRATAMIENTO
+  EN_ADOPCION
+  ADOPTADO
+  OTRO
+}
+
+model Especie {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique @db.VarChar(80)
+  descripcion String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  animales Animal[]
+
+  @@map("especies")
+}
+
+// Varios campos opcionales: hay animales que llegan sin antecedentes.
 model Animal {
-  id            Int         @id @default(autoincrement())
-  nombre        String?
-  especie       String
-  edadEstimada  String? 
-  sexo          String?
+  id            Int          @id @default(autoincrement())
+  nombre        String?      @db.VarChar(100)
+  edadEstimada  Int?
+  sexo          Sexo         @default(DESCONOCIDO)
   peso          Float?
-  estadoGeneral String?
-  fotografiaUrl String?
+  estadoGeneral String?      @db.Text
+  fotografiaUrl String?      @db.VarChar(500)
+  estado        EstadoAnimal @default(EN_EVALUACION)
   tieneChip     Boolean?
-  numeroChip    String?
-  observaciones String?
+  numeroChip    String?      @db.VarChar(50)
+  observaciones String?      @db.Text
   fechaIngreso  DateTime     @default(now())
   fechaEgreso   DateTime?
-  motivoEgreso  String?
+  motivoEgreso  String?      @db.VarChar(255)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  adopciones        Adopcion[]
+  especieId Int
+  especie   Especie @relation(fields: [especieId], references: [id], onDelete: Restrict)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  adopciones Adopcion[]
+
+  @@index([estado])
+  @@map("animales")
 }
 
 model Adopcion {
   id             Int      @id @default(autoincrement())
-  nombre         String   
-  rut            String   
-  email          String   
-  telefono       String   
-  direccion      String   
-  comuna         String   
-  tipoVivienda   String?  
+  nombre         String
+  rut            String
+  email          String
+  telefono       String
+  direccion      String
+  comuna         String
+  tipoVivienda   String?
   otrasMascotas  String?
   motivo         String?
   estado         String   @default("PENDIENTE")
-  observaciones  String?  
+  observaciones  String?
   fechaSolicitud DateTime @default(now())
 
-  animalId       Int
-  animal         Animal @relation(fields: [animalId], references: [id])
+  animalId Int
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@map("adopciones")
 }
