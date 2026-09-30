@@ -1,10 +1,23 @@
-function App() {
-  return (
-    <main>
-      <h1>Refugio de Animales</h1>
+import { useState } from "react";
+import RegistroPage from "./pages/RegistroPage.jsx";
+import InicioPage from "./pages/InicioPage.jsx";
+import Layout from "./components/Layout.jsx";
 
-      <p>Sistema de gestión del refugio.</p>
-    </main>
+function App() {
+  const [registrado, setRegistrado] = useState(false);
+
+  if (!registrado) {
+    return (
+      <RegistroPage
+        onRegistro={() => setRegistrado(true)}
+      />
+    );
+  }
+
+  return (
+    <Layout>
+      <InicioPage />
+    </Layout>
   );
 }
 
