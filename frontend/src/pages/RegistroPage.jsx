@@ -3,9 +3,11 @@ import { useState } from "react";
 function RegistroPage({ onRegistro }) {
   const [formulario, setFormulario] = useState({
     nombre: "",
+    apellido: "",
     correo: "",
     contrasena: "",
     confirmarContrasena: "",
+    
   });
 
   const handleChange = (e) => {
@@ -43,6 +45,23 @@ function RegistroPage({ onRegistro }) {
             value={formulario.nombre}
             onChange={handleChange}
             placeholder="Ingrese su nombre"
+            required
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label htmlFor="apellido">Apellido</label>
+          <br />
+
+          <input
+            type="text"
+            id="apellido"
+            name="apellido"
+            value={formulario.apellido}
+            onChange={handleChange}
+            placeholder="Ingrese su apellido"
             required
           />
         </div>
