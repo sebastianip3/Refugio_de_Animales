@@ -31,6 +31,23 @@ enum EstadoAdopcion {
   CANCELADA
 }
 
+enum TamanoMascota {
+  PEQUENO
+  MEDIANO
+  GRANDE
+}
+
+// PENDIENTE: llenó el formulario. CITADA: la administradora le envió el comprobante.
+// RECHAZADA y CANCELADA no ocupan cupo.
+enum EstadoInscripcion {
+  PENDIENTE
+  CITADA
+  ASISTIO
+  NO_ASISTIO
+  RECHAZADA
+  CANCELADA
+}
+
 model Especie {
   id          Int      @id @default(autoincrement())
   nombre      String   @unique @db.VarChar(80)
@@ -38,7 +55,8 @@ model Especie {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  animales Animal[]
+  animales      Animal[]
+  inscripciones InscripcionEsterilizacion[]
 
   @@map("especies")
 }
@@ -94,4 +112,61 @@ model Adopcion {
 
   @@index([animalId, estado])
   @@map("adopciones")
+}
+
+// El formulario solo acepta inscripciones mientras la jornada esté activa y queden cupos.
+model JornadaEsterilizacion {
+  id                          Int      @id @default(autoincrement())
+  nombre                      String   @db.VarChar(150)
+  fecha                       DateTime
+  lugar                       String   @db.VarChar(255)
+  comuna                      String   @db.VarChar(100)
+  sector                      String?  @db.VarChar(100)
+  cuposTotales                Int
+  activa                      Boolean  @default(true)
+  // Se envían en el comprobante de citación
+  indicacionesPostOperatorias String   @db.Text
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  inscripciones InscripcionEsterilizacion[]
+
+  @@index([activa, fecha])
+  @@map("jornadas_esterilizacion")
+}
+
+// La mascota no se registra como Animal: es de la comunidad, no del refugio.
+model InscripcionEsterilizacion {
+  id     Int               @id @default(autoincrement())
+  estado EstadoInscripcion @default(PENDIENTE)
+
+  // Datos de la mascota
+  sexo         Sexo
+  tamano       TamanoMascota
+  pesoEstimado Float
+
+  especieId Int
+  especie   Especie @relation(fields: [especieId], references: [id], onDelete: Restrict)
+
+  // Datos del tutor
+  tutorNombre   String @db.VarChar(100)
+  tutorApellido String @db.VarChar(100)
+  tutorRut      String @db.VarChar(12)
+  tutorEmail    String @db.VarChar(150)
+  tutorComuna   String @db.VarChar(100)
+  tutorSector   String @db.VarChar(100)
+
+  // Lo completa la administradora al revisar y enviar la citación
+  observaciones    String?   @db.Text
+  fechaEnvioCorreo DateTime?
+
+  jornadaId Int
+  jornada   JornadaEsterilizacion @relation(fields: [jornadaId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([jornadaId, estado])
+  @@index([tutorRut])
+  @@map("inscripciones_esterilizacion")
 }

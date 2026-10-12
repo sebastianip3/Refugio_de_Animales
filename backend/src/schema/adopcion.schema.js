@@ -22,7 +22,7 @@ function rutValido(rut) {
 }
 
 // Acepta "12.345.678-k", "12345678-K" o "12345678K" y lo guarda como "12345678-K"
-const rutSchema = z
+export const rutSchema = z
   .string()
   .trim()
   .transform((valor) => valor.replace(/\./g, '').replace(/-/g, '').toUpperCase())
