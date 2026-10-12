@@ -75,7 +75,6 @@ export async function actualizarAnimal(req, res) {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ message: 'ID inválido' });
-
     const data = updateAnimalSchema.parse(req.body);
     const animal = await animalService.actualizarAnimal(id, data);
     res.json(animal);
