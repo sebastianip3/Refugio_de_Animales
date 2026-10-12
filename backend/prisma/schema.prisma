@@ -22,6 +22,17 @@ enum EstadoAnimal {
   OTRO
 }
 
+enum TipoRegistroClinico {
+  CONSULTA
+  VACUNA
+  DESPARASITACION
+  CIRUGIA
+  ESTERILIZACION
+  TRATAMIENTO
+  EXAMEN
+  OTRO
+}
+
 // PENDIENTE y EN_REVISION cuentan como "adopción en proceso"
 enum EstadoAdopcion {
   PENDIENTE
@@ -65,7 +76,8 @@ model Animal {
   especieId Int
   especie   Especie @relation(fields: [especieId], references: [id], onDelete: Restrict)
 
-  adopciones Adopcion[]
+  adopciones        Adopcion[]
+  registrosClinicos RegistroClinico[]
 
   @@index([estado])
   @@map("animales")
@@ -94,4 +106,24 @@ model Adopcion {
 
   @@index([animalId, estado])
   @@map("adopciones")
+}
+
+// Antecedente veterinario de un animal. Los adoptantes solo pueden consultarlo
+model RegistroClinico {
+  id            Int                 @id @default(autoincrement())
+  fecha         DateTime            @default(now())
+  tipo          TipoRegistroClinico
+  descripcion   String              @db.Text
+  diagnostico   String?             @db.Text
+  tratamiento   String?             @db.Text
+  veterinario   String?             @db.VarChar(100)
+  observaciones String?             @db.Text
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  animalId Int
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
+
+  @@index([animalId, fecha])
+  @@map("registros_clinicos")
 }
