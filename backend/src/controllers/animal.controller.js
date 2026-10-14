@@ -61,6 +61,19 @@ export async function obtenerAnimal(req, res) {
   }
 }
 
+// GET /animales/:id/historial
+export async function obtenerHistorialClinico(req, res) {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'ID inválido' });
+
+    const animal = await animalService.obtenerHistorialClinico(id);
+    res.json(animal);
+  } catch (error) {
+    manejarError(res, error);
+  }
+}
+
 export async function crearAnimal(req, res) {
   try {
     const data = animalSchema.parse(req.body);
