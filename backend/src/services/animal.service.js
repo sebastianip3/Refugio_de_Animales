@@ -16,6 +16,19 @@ export async function obtenerAnimal(id) {
   return animal;
 }
 
+// Solo lectura: el historial clínico no se modifica desde la API
+export async function obtenerHistorialClinico(id) {
+  const animal = await prisma.animal.findUnique({
+    where: { id },
+    include: {
+      especie: true,
+      registrosClinicos: { orderBy: { fecha: 'desc' } },
+    },
+  });
+  if (!animal) throw new AppError(404, 'Animal no encontrado');
+  return animal;
+}
+
 export function crearAnimal(data) {
   return prisma.animal.create({ data, include: { especie: true } });
 }

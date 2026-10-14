@@ -12,5 +12,4 @@ router.get('/', listarAdopciones);
 router.get('/:id', obtenerAdopcion);
 router.post('/', crearAdopcion);
 router.patch('/:id', actualizarAdopcion);
-
 export default router;
