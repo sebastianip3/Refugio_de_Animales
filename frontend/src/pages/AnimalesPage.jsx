@@ -69,7 +69,8 @@ const estiloCampo = {
   border: '1px solid #ccc',
   borderRadius: '4px',
   padding: '8px',
-  marginBottom: '16px',
+  marginBottom: '10px',
+  marginTop: "5px"
 };
 
 function AnimalesPage() {
@@ -182,7 +183,7 @@ function AnimalesPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="nombre">Nombre</label>
+          <label htmlFor="nombre" style={{fontSize: "1.2em"}}>Nombre</label>
           <br />
           <input
             type="text"
@@ -197,7 +198,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="especieId">Especie</label>
+          <label htmlFor="especieId" style={{fontSize: "1.2em"}}>Especie</label>
           <br />
           <select
             id="especieId"
@@ -217,7 +218,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="sexo">Sexo</label>
+          <label htmlFor="sexo" style={{fontSize: "1.2em"}}>Sexo</label>
           <br />
           <select 
             id="sexo" 
@@ -235,7 +236,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="edadEstimada">Edad estimada (meses)</label>
+          <label htmlFor="edadEstimada" style={{fontSize: "1.2em"}} >Edad estimada (meses)</label>
           <br />
           <input
             type="number"
@@ -250,7 +251,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="peso">Peso (kg)</label>
+          <label htmlFor="peso" style={{fontSize: "1.2em"}}>Peso (kg)</label>
           <br />
           <input
             type="number"
@@ -265,7 +266,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="estado">Estado</label>
+          <label htmlFor="estado" style={{ fontSize: "1.2em"}} >Estado</label>
           <br />
           <select 
             id="estado" 
@@ -283,7 +284,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label>
+          <label style={{display: "block", textAlign: "center" , fontSize: "1.2em"}}>
             <input
               type="checkbox"
               name="tieneChip"
@@ -297,7 +298,7 @@ function AnimalesPage() {
 
         {formulario.tieneChip && (
           <div>
-            <label htmlFor="numeroChip">Número de chip</label>
+            <label htmlFor="numeroChip" style={{fontSize: "1.2em"}}>Número de chip</label>
             <br />
             <input
               type="text"
@@ -312,7 +313,7 @@ function AnimalesPage() {
         )}
 
         <div>
-          <label htmlFor="fotografiaUrl">URL de fotografía</label>
+          <label htmlFor="fotografiaUrl" style={{fontSize: "1.2em"}}>URL de fotografía</label>
           <br />
           <input
             type="url"
@@ -327,7 +328,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="estadoGeneral">Estado general</label>
+          <label htmlFor="estadoGeneral" style={{fontSize: "1.2em"}}>Estado general</label>
           <br />
           <textarea
             id="estadoGeneral"
@@ -339,7 +340,7 @@ function AnimalesPage() {
         </div>
 
         <div>
-          <label htmlFor="observaciones">Observaciones</label>
+          <label htmlFor="observaciones" style={{fontSize: "1.2em"}}>Observaciones</label>
           <br />
           <textarea
             id="observaciones"
@@ -360,8 +361,9 @@ function AnimalesPage() {
             color: '#ffffff',
             border: "1px solid #333",
             padding: '10px 20px',
-            cursor: guardando ? 'not-allowed' : 'pointer'
-            
+            cursor: guardando ? 'not-allowed' : 'pointer',
+            display: "block",
+            margin: "0 auto",
           }}
         >
           {guardando ? "Guardando..." : editandoId ? "Guardar cambios" : "Registrar"}
