@@ -50,6 +50,16 @@ function aPayload(formulario) {
   };
 }
 
+//Estilo de los campos inputs
+const estiloCampo = {
+  backgroundColor: '#ffffff',
+  border: '1px solid #ccc',
+  borderRadius: '4px',
+  padding: '8px',
+  marginBottom: '10px',
+  marginTop: "5px"
+};
+
 function AdopcionesPage() {
   const [adopciones, setAdopciones] = useState([]);
   const [animales, setAnimales] = useState([]);
@@ -128,17 +138,38 @@ function AdopcionesPage() {
   };
 
   return (
-    <section>
-      <h2>Adopciones</h2>
+    <section
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        boxSizing: "border-box",
+        backgroundColor: '#47b0f7'
+      }}
+    >
+      <h2
+      style={{
+        textAlign: "center",
+        fontSize: "5em",
+        marginBottom: "1px",
+      }}
+      >Adopciones</h2>
 
       {error && <p style={{ color: "crimson" }}>{error}</p>}
       {mensaje && <p style={{ color: "green" }}>{mensaje}</p>}
 
-      <h3>Ficha de adopción</h3>
+      <h3
+      style={{ marginTop: "40px", marginBottom: "20px", fontSize: "1.5em", color: "#030507" }}
+      >Ficha de adopción</h3>
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="animalId">Animal</label>
+          <label htmlFor="animalId" style={{ fontSize: "1.2em" }}>
+            Animal
+          </label>
           <br />
           <select
             id="animalId"
@@ -146,8 +177,9 @@ function AdopcionesPage() {
             value={formulario.animalId}
             onChange={handleChange}
             required
+            style={estiloCampo}
           >
-            <option value="">Seleccione un animal</option>
+            <option value="" style={{ estiloCampo }}>Seleccione un animal</option>
             {animalesDisponibles.map((animal) => (
               <option
                 key={animal.id}
@@ -162,7 +194,7 @@ function AdopcionesPage() {
         </div>
 
         <div>
-          <label htmlFor="nombre">Nombre completo</label>
+          <label htmlFor="nombre" style={{ fontSize: "1.2em" }}>Nombre completo</label>
           <br />
           <input
             type="text"
@@ -173,11 +205,14 @@ function AdopcionesPage() {
             minLength={2}
             maxLength={100}
             required
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="rut">RUT</label>
+          <label htmlFor="rut" style={{ fontSize: "1.2em" }}>
+            RUT
+          </label>
           <br />
           <input
             type="text"
@@ -187,11 +222,12 @@ function AdopcionesPage() {
             onChange={handleChange}
             placeholder="12.345.678-5"
             required
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="email">Correo electrónico</label>
+          <label htmlFor="email" style={{ fontSize: "1.2em" }}>Correo electrónico</label>
           <br />
           <input
             type="email"
@@ -201,11 +237,14 @@ function AdopcionesPage() {
             onChange={handleChange}
             placeholder="correo@ejemplo.com"
             required
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="telefono">Teléfono</label>
+          <label htmlFor="telefono" style={{ fontSize: "1.2em" }}>
+            Teléfono
+          </label>
           <br />
           <input
             type="tel"
@@ -217,11 +256,14 @@ function AdopcionesPage() {
             maxLength={15}
             placeholder="912345678"
             required
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="direccion">Dirección</label>
+          <label htmlFor="direccion" style={{ fontSize: "1.2em" }}>
+            Dirección
+          </label>
           <br />
           <input
             type="text"
@@ -232,11 +274,12 @@ function AdopcionesPage() {
             minLength={3}
             maxLength={255}
             required
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="comuna">Comuna</label>
+          <label htmlFor="comuna" style={{ fontSize: "1.2em" }}>Comuna</label>
           <br />
           <input
             type="text"
@@ -247,11 +290,14 @@ function AdopcionesPage() {
             minLength={2}
             maxLength={100}
             required
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="tipoVivienda">Tipo de vivienda</label>
+          <label htmlFor="tipoVivienda" style={{ fontSize: "1.2em" }}>
+            Tipo de vivienda
+          </label>
           <br />
           <input
             type="text"
@@ -261,44 +307,63 @@ function AdopcionesPage() {
             onChange={handleChange}
             maxLength={100}
             placeholder="Casa con patio, departamento..."
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="otrasMascotas">Otras mascotas</label>
+          <label htmlFor="otrasMascotas" style={{ fontSize: "1.2em" }}>
+            Otras mascotas
+          </label>
           <br />
           <textarea
             id="otrasMascotas"
             name="otrasMascotas"
             value={formulario.otrasMascotas}
             onChange={handleChange}
+            style={ estiloCampo }
           />
         </div>
 
         <div>
-          <label htmlFor="motivo">Motivo de la adopción</label>
+          <label htmlFor="motivo" style={{ fontSize: "1.2em" }}>
+            Motivo de la adopción
+          </label>
           <br />
           <textarea
             id="motivo"
             name="motivo"
             value={formulario.motivo}
             onChange={handleChange}
+            style={ estiloCampo }
           />
         </div>
 
         <br />
 
-        <button type="submit" disabled={guardando}>
+        <button type="submit" disabled={guardando} style={{
+            backgroundColor: '#08385f',
+            color: '#ffffff',
+            border: "1px solid #333",
+            padding: '10px 20px',
+            cursor: guardando ? 'not-allowed' : 'pointer',
+            display: "block",
+            margin: "0 auto",
+          }}>
           {guardando ? "Enviando..." : "Enviar solicitud"}
         </button>
       </form>
 
-      <h3>Solicitudes</h3>
+      <h3
+      style={{ marginTop: "40px", marginBottom: "20px", fontSize: "2em", color: "#030507" }}
+      >Solicitudes</h3>
 
       {cargando ? (
         <p>Cargando...</p>
       ) : adopciones.length === 0 ? (
-        <p>No hay solicitudes de adopción.</p>
+        <p
+        style={{ color: "crimson", fontWeight: "bold", fontSize: "1.5em" }}
+        >No hay solicitudes de adopción.</p>
       ) : (
         <table border="1" cellPadding="6">
           <thead>
