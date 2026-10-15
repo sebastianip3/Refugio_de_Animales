@@ -28,7 +28,18 @@ function RegistroPage({ onRegistro }) {
 };
 
   return (
-    <main>
+    <main
+    style={{
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
+    boxSizing: "border-box",
+    backgroundColor: '#f5e483'
+    }}
+  >
       <h1>Refugio de Animales</h1>
 
       <h2>Crear cuenta</h2>

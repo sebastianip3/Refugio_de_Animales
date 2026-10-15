@@ -4,7 +4,7 @@ import { Container, Box, Typography, Card, CardContent, Grid } from '@mui/materi
 
 function InicioPage() {
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f4f6f8', py: 6 }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5e483', py: 6 , display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <Container maxWidth="md">
         
         {/* Tarjeta central de bienvenida */}
