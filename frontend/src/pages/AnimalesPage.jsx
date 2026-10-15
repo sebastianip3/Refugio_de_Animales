@@ -63,6 +63,15 @@ function aFormulario(animal) {
   };
 }
 
+//Estilo de los campos editables de texto 
+const estiloCampo = {
+  backgroundColor: '#ffffff',
+  border: '1px solid #ccc',
+  borderRadius: '4px',
+  padding: '8px',
+  marginBottom: '16px',
+};
+
 function AnimalesPage() {
   const [animales, setAnimales] = useState([]);
   const [especies, setEspecies] = useState([]);
@@ -149,12 +158,27 @@ function AnimalesPage() {
   };
 
   return (
-    <section>
-      <h2>Animales</h2>
+    <section
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        boxSizing: "border-box",
+        backgroundColor: '#b5f391'
+      }}
+    >
+      <h2
+      style={{ marginBottom: "1px", fontSize: "5em", color: "#030507" }}
+      >Animales</h2>
 
       {error && <p style={{ color: "crimson" }}>{error}</p>}
 
-      <h3>{editandoId ? `Editar animal #${editandoId}` : "Registrar animal"}</h3>
+      <h3
+      style={{ marginTop: "40px", marginBottom: "20px", fontSize: "1.5em", color: "#030507" }}
+      >{editandoId ? `Editar animal #${editandoId}` : "Registrar animal"}</h3>
 
       <form onSubmit={handleSubmit}>
         <div>
@@ -168,6 +192,7 @@ function AnimalesPage() {
             onChange={handleChange}
             maxLength={100}
             placeholder="Sin nombre"
+            style={estiloCampo}
           />
         </div>
 
@@ -180,6 +205,7 @@ function AnimalesPage() {
             value={formulario.especieId}
             onChange={handleChange}
             required
+            style={estiloCampo}
           >
             <option value="">Seleccione una especie</option>
             {especies.map((especie) => (
@@ -193,7 +219,13 @@ function AnimalesPage() {
         <div>
           <label htmlFor="sexo">Sexo</label>
           <br />
-          <select id="sexo" name="sexo" value={formulario.sexo} onChange={handleChange}>
+          <select 
+            id="sexo" 
+            name="sexo" 
+            value={formulario.sexo} 
+            onChange={handleChange}
+            style={estiloCampo}
+          >
             {SEXOS.map((sexo) => (
               <option key={sexo} value={sexo}>
                 {formatearEnum(sexo)}
@@ -213,6 +245,7 @@ function AnimalesPage() {
             onChange={handleChange}
             min={0}
             step={1}
+            style={estiloCampo}
           />
         </div>
 
@@ -227,13 +260,20 @@ function AnimalesPage() {
             onChange={handleChange}
             min={0.01}
             step={0.01}
+            style={estiloCampo}
           />
         </div>
 
         <div>
           <label htmlFor="estado">Estado</label>
           <br />
-          <select id="estado" name="estado" value={formulario.estado} onChange={handleChange}>
+          <select 
+            id="estado" 
+            name="estado" 
+            value={formulario.estado} 
+            onChange={handleChange}
+            style={estiloCampo}
+          >
             {ESTADOS.map((estado) => (
               <option key={estado} value={estado}>
                 {formatearEnum(estado)}
@@ -249,6 +289,7 @@ function AnimalesPage() {
               name="tieneChip"
               checked={formulario.tieneChip}
               onChange={handleChange}
+              style={estiloCampo}
             />
             Tiene chip
           </label>
@@ -265,6 +306,7 @@ function AnimalesPage() {
               value={formulario.numeroChip}
               onChange={handleChange}
               maxLength={50}
+              style={estiloCampo}
             />
           </div>
         )}
@@ -280,6 +322,7 @@ function AnimalesPage() {
             onChange={handleChange}
             maxLength={500}
             placeholder="https://..."
+            style={estiloCampo}
           />
         </div>
 
@@ -291,6 +334,7 @@ function AnimalesPage() {
             name="estadoGeneral"
             value={formulario.estadoGeneral}
             onChange={handleChange}
+            style={estiloCampo}
           />
         </div>
 
@@ -302,12 +346,24 @@ function AnimalesPage() {
             name="observaciones"
             value={formulario.observaciones}
             onChange={handleChange}
+            style={estiloCampo}
           />
         </div>
 
         <br />
 
-        <button type="submit" disabled={guardando}>
+        <button 
+          type="submit" 
+          disabled={guardando}
+          style={{
+            backgroundColor: '#435f0f',
+            color: '#ffffff',
+            border: "1px solid #333",
+            padding: '10px 20px',
+            cursor: guardando ? 'not-allowed' : 'pointer'
+            
+          }}
+        >
           {guardando ? "Guardando..." : editandoId ? "Guardar cambios" : "Registrar"}
         </button>{" "}
         {editandoId && (
@@ -317,12 +373,16 @@ function AnimalesPage() {
         )}
       </form>
 
-      <h3>Listado</h3>
+      <h3
+      style={{ marginTop: "40px", marginBottom: "20px", fontSize: "2em", color: "#030507" }}
+    >Listado</h3>
 
       {cargando ? (
         <p>Cargando...</p>
       ) : animales.length === 0 ? (
-        <p>No hay animales registrados.</p>
+        <p
+        style={{ color: "crimson", fontWeight: "bold", fontSize: "1.5em" }}
+      >No hay animales registrados.</p>
       ) : (
         <table border="1" cellPadding="6">
           <thead>
