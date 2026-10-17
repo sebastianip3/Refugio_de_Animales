@@ -3,12 +3,14 @@ import RegistroPage from "./pages/RegistroPage.jsx";
 import InicioPage from "./pages/InicioPage.jsx";
 import AnimalesPage from "./pages/AnimalesPage.jsx";
 import AdopcionesPage from "./pages/AdopcionesPage.jsx";
+import HistorialPage from "./pages/HistorialPage.jsx";
 import Layout from "./components/Layout.jsx";
 
 const PAGINAS = {
   inicio: InicioPage,
   animales: AnimalesPage,
   adopciones: AdopcionesPage,
+  historial: HistorialPage,
 };
 
 function App() {
