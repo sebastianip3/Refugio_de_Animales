@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import { HOST, PORT } from './src/config/configEnv.js';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -6,7 +6,6 @@ import router from './src/routes/index.routes.js';
 import prisma from './src/config/prisma.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -20,7 +19,7 @@ async function bootstrap() {
     console.log('=> Conexión a PostgreSQL establecida con éxito');
 
     app.listen(PORT, () => {
-      console.log(`Servidor corriendo en puerto ${PORT}`);
+      console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
     });
   } catch (error) {
     console.error('=> Error al iniciar el servidor o conectar a PostgreSQL:', error);
