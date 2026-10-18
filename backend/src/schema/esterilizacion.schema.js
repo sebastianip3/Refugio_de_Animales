@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { rutSchema } from './adopcion.schema.js';
 
 export const TAMANOS = ['PEQUENO', 'MEDIANO', 'GRANDE'];
-export const ESTADOS_INSCRIPCION = ['PENDIENTE', 'CITADA', 'ASISTIO', 'NO_ASISTIO', 'RECHAZADA', 'CANCELADA'];
+export const ESTADOS_INSCRIPCION = ['CONFIRMADA', 'ASISTIO', 'NO_ASISTIO', 'CANCELADA'];
+export const ESTADOS_CORREO = ['PENDIENTE', 'ENVIADO', 'FALLIDO'];
 
-export const ESTADOS_SIN_CUPO = ['RECHAZADA', 'CANCELADA'];
+export const ESTADOS_SIN_CUPO = ['CANCELADA'];
 
 // Jornada que crea la administradora
 export const jornadaSchema = z.object({
@@ -20,7 +21,8 @@ export const jornadaSchema = z.object({
 
 export const updateJornadaSchema = jornadaSchema.partial();
 
-// Formulario que llena la comunidad
+// Formulario que llena la comunidad. El estado, el folio y los datos del correo
+// no se reciben: los asigna el sistema al confirmar la inscripción
 export const inscripcionSchema = z.object({
   especieId: z.number().int().positive(),
   sexo: z.enum(['MACHO', 'HEMBRA']),
@@ -34,10 +36,11 @@ export const inscripcionSchema = z.object({
   tutorSector: z.string().trim().min(2).max(100),
 });
 
-// Revisión de la administradora
+// La administradora registra la asistencia o cancela. No se puede volver a
+// CONFIRMADA porque reactivar una cancelada exigiría revisar el cupo de nuevo
 export const updateInscripcionSchema = z
   .object({
-    estado: z.enum(ESTADOS_INSCRIPCION.filter((e) => e !== 'CITADA')),
+    estado: z.enum(ESTADOS_INSCRIPCION.filter((e) => e !== 'CONFIRMADA')),
     observaciones: z.string().trim().nullish(),
   })
   .partial();
