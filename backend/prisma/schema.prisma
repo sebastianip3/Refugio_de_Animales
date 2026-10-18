@@ -199,7 +199,7 @@ model InscripcionEsterilizacion {
   // Notas de la administradora
   observaciones String? @db.Text
 
-  // Lo actualiza el sistema al enviar el comprobante; un fallo no anula la inscripción
+  // Lo actualiza el sistema al enviar el comprobante, un fallo no anula la inscripción
   estadoCorreo     EstadoCorreo @default(PENDIENTE)
   intentosCorreo   Int          @default(0)
   fechaEnvioCorreo DateTime?
