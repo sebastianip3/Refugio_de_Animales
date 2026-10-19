@@ -64,6 +64,26 @@ enum EstadoCorreo {
   FALLIDO
 }
 
+enum TipoCuenta {
+  ADMINISTRADOR
+  VOLUNTARIO
+  TRABAJADOR
+}
+
+model Cuenta {
+  id             Int        @id @default(autoincrement())
+  nombre         String     @db.VarChar(100)
+  apellido       String     @db.VarChar(100)
+  tipo           TipoCuenta @default(VOLUNTARIO)
+  correo         String     @unique @db.VarChar(254)
+  contrasenaHash String     @db.VarChar(255)
+  horario        String?    @db.VarChar(255)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("cuentas")
+}
+
 model Especie {
   id          Int      @id @default(autoincrement())
   nombre      String   @unique @db.VarChar(80)
