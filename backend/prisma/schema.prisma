@@ -48,15 +48,20 @@ enum TamanoMascota {
   GRANDE
 }
 
-// PENDIENTE: llenó el formulario. CITADA: la administradora le envió el comprobante.
-// RECHAZADA y CANCELADA no ocupan cupo.
+// El sistema solo crea la inscripción si queda cupo, por eso nace CONFIRMADA.
+// CANCELADA es la única que no ocupa cupo.
 enum EstadoInscripcion {
-  PENDIENTE
-  CITADA
+  CONFIRMADA
   ASISTIO
   NO_ASISTIO
-  RECHAZADA
   CANCELADA
+}
+
+// Envío automático del comprobante. FALLIDO queda pendiente de reintento.
+enum EstadoCorreo {
+  PENDIENTE
+  ENVIADO
+  FALLIDO
 }
 
 model Especie {
@@ -148,15 +153,16 @@ model RegistroClinico {
 
 // El formulario solo acepta inscripciones mientras la jornada esté activa y queden cupos.
 model JornadaEsterilizacion {
-  id                          Int      @id @default(autoincrement())
-  nombre                      String   @db.VarChar(150)
-  fecha                       DateTime
-  lugar                       String   @db.VarChar(255)
-  comuna                      String   @db.VarChar(100)
-  sector                      String?  @db.VarChar(100)
-  cuposTotales                Int
-  activa                      Boolean  @default(true)
-  // Se envían en el comprobante de citación
+  id           Int      @id @default(autoincrement())
+  nombre       String   @db.VarChar(150)
+  fecha        DateTime
+  lugar        String   @db.VarChar(255)
+  comuna       String   @db.VarChar(100)
+  sector       String?  @db.VarChar(100)
+  cuposTotales Int
+  activa       Boolean  @default(true)
+
+  // El sistema las incluye en el correo de confirmación
   indicacionesPostOperatorias String   @db.Text
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
@@ -167,10 +173,12 @@ model JornadaEsterilizacion {
   @@map("jornadas_esterilizacion")
 }
 
-// La mascota no se registra como Animal: es de la comunidad, no del refugio.
 model InscripcionEsterilizacion {
   id     Int               @id @default(autoincrement())
-  estado EstadoInscripcion @default(PENDIENTE)
+  estado EstadoInscripcion @default(CONFIRMADA)
+
+  // Folio impreso en el comprobante PDF
+  codigoComprobante String @unique @db.VarChar(20)
 
   // Datos de la mascota
   sexo         Sexo
@@ -188,9 +196,14 @@ model InscripcionEsterilizacion {
   tutorComuna   String @db.VarChar(100)
   tutorSector   String @db.VarChar(100)
 
-  // Lo completa la administradora al revisar y enviar la citación
-  observaciones    String?   @db.Text
+  // Notas de la administradora
+  observaciones String? @db.Text
+
+  // Lo actualiza el sistema al enviar el comprobante, un fallo no anula la inscripción
+  estadoCorreo     EstadoCorreo @default(PENDIENTE)
+  intentosCorreo   Int          @default(0)
   fechaEnvioCorreo DateTime?
+  errorCorreo      String?      @db.Text
 
   jornadaId Int
   jornada   JornadaEsterilizacion @relation(fields: [jornadaId], references: [id], onDelete: Restrict)
@@ -200,5 +213,6 @@ model InscripcionEsterilizacion {
 
   @@index([jornadaId, estado])
   @@index([tutorRut])
+  @@index([estadoCorreo])
   @@map("inscripciones_esterilizacion")
 }
