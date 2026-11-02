@@ -68,6 +68,7 @@ enum TipoCuenta {
   ADMINISTRADOR
   VOLUNTARIO
   TRABAJADOR
+  ENCARGADO_ADOPCIONES
 }
 
 model Cuenta {
