@@ -15,7 +15,6 @@ export const jornadaSchema = z.object({
   comuna: z.string().trim().min(2).max(100),
   sector: z.string().trim().max(100).nullish(),
   cuposTotales: z.number().int().min(1),
-  activa: z.boolean().optional(),
   indicacionesPostOperatorias: z.string().trim().min(1),
 });
 
