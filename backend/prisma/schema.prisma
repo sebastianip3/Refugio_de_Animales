@@ -160,7 +160,7 @@ model JornadaEsterilizacion {
   comuna       String   @db.VarChar(100)
   sector       String?  @db.VarChar(100)
   cuposTotales Int
-  activa       Boolean  @default(true)
+  activa       Boolean  @default(false)
 
   // El sistema las incluye en el correo de confirmación
   indicacionesPostOperatorias String   @db.Text
