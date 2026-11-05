@@ -17,6 +17,16 @@ export function listarAdopciones(filtros = {}) {
   });
 }
 
+// Pública: solo los IDs, para que la ficha deshabilite esos animales sin exponer datos personales
+export async function listarAnimalesEnProceso() {
+  const adopciones = await prisma.adopcion.findMany({
+    where: { estado: { in: ESTADOS_EN_PROCESO } },
+    select: { animalId: true },
+    distinct: ['animalId'],
+  });
+  return adopciones.map((adopcion) => adopcion.animalId);
+}
+
 export async function obtenerAdopcion(id) {
   const adopcion = await prisma.adopcion.findUnique({ where: { id }, include: INCLUDE_ANIMAL });
   if (!adopcion) throw new AppError(404, 'Adopción no encontrada');
