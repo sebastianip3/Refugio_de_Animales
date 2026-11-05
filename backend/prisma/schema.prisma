@@ -82,6 +82,8 @@ model Cuenta {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
+  cuidados CuidadoAnimal[]
+
   @@map("cuentas")
 }
 
@@ -122,9 +124,27 @@ model Animal {
 
   adopciones        Adopcion[]
   registrosClinicos RegistroClinico[]
+  cuidados          CuidadoAnimal[]
 
   @@index([estado])
   @@map("animales")
+}
+
+model CuidadoAnimal {
+  id          Int      @id @default(autoincrement())
+  fechaInicio DateTime
+  fechaFin    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  animalId Int
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
+  cuentaId Int
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
+
+  @@index([animalId, fechaInicio, fechaFin])
+  @@index([cuentaId, fechaInicio, fechaFin])
+  @@map("cuidados_animales")
 }
 
 model Adopcion {
