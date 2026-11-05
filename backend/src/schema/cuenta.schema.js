@@ -12,3 +12,7 @@ export const cambiarCorreoCuentaSchema = z.object({
   correo: correoSchema,
   contrasena: z.string().min(1).max(72),
 });
+
+export const cambiarDisponibilidadCuidadoSchema = z.object({
+  disponibleCuidado: z.boolean(),
+});

@@ -15,3 +15,26 @@ export async function cambiarCorreo(id, correo, contrasena) {
     omit: { contrasenaHash: true },
   });
 }
+
+export async function cambiarDisponibilidadCuidado(id, disponibleCuidado) {
+  const cuenta = await prisma.cuenta.findUnique({
+    where: { id },
+    select: { id: true, tipo: true },
+  });
+  if (!cuenta) throw new AppError(404, 'Cuenta no encontrada');
+  if (cuenta.tipo !== 'VOLUNTARIO') {
+    throw new AppError(403, 'Solo los voluntarios pueden cambiar su disponibilidad de cuidado');
+  }
+
+  return prisma.cuenta.update({
+    where: { id },
+    data: { disponibleCuidado },
+    select: {
+      id: true,
+      nombre: true,
+      apellido: true,
+      tipo: true,
+      disponibleCuidado: true,
+    },
+  });
+}

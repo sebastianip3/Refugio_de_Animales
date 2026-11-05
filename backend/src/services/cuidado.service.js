@@ -1,8 +1,6 @@
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 
-const TIPOS_CUIDADOR = ['ADMINISTRADOR', 'VOLUNTARIO', 'TRABAJADOR'];
-
 function filtroSolapamiento({ animalId, fechaInicio, fechaFin }) {
   return {
     animalId,
@@ -21,7 +19,15 @@ export async function consultarDisponibilidad({ animalId, fechaInicio, fechaFin 
   const asignacionesAnimal = await prisma.cuidadoAnimal.findMany({
     where: filtroSolapamiento({ animalId, fechaInicio, fechaFin }),
     include: {
-      cuenta: { select: { id: true, nombre: true, apellido: true, tipo: true } },
+      cuenta: {
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          tipo: true,
+          disponibleCuidado: true,
+        },
+      },
     },
     orderBy: { fechaInicio: 'asc' },
   });
@@ -39,10 +45,18 @@ export async function consultarDisponibilidad({ animalId, fechaInicio, fechaFin 
     ? []
     : await prisma.cuenta.findMany({
       where: {
-        tipo: { in: TIPOS_CUIDADOR },
+        tipo: 'VOLUNTARIO',
+        disponibleCuidado: true,
         id: { notIn: cuentasOcupadas.map(({ cuentaId }) => cuentaId) },
       },
-      select: { id: true, nombre: true, apellido: true, tipo: true, horario: true },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        tipo: true,
+        horario: true,
+        disponibleCuidado: true,
+      },
       orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
     });
 
@@ -62,10 +76,13 @@ export async function asignarCuidado({ animalId, cuentaId, fechaInicio, fechaFin
 
     const cuenta = await tx.cuenta.findUnique({
       where: { id: cuentaId },
-      select: { id: true, tipo: true },
+      select: { id: true, tipo: true, disponibleCuidado: true },
     });
-    if (!cuenta || !TIPOS_CUIDADOR.includes(cuenta.tipo)) {
-      throw new AppError(404, 'Persona cuidadora no encontrada o no habilitada');
+    if (!cuenta || cuenta.tipo !== 'VOLUNTARIO') {
+      throw new AppError(404, 'Voluntario no encontrado');
+    }
+    if (!cuenta.disponibleCuidado) {
+      throw new AppError(409, 'El voluntario no está disponible para cuidar animales');
     }
 
     const asignacionAnimal = await tx.cuidadoAnimal.findFirst({
@@ -92,7 +109,15 @@ export async function asignarCuidado({ animalId, cuentaId, fechaInicio, fechaFin
       data: { animalId, cuentaId, fechaInicio, fechaFin },
       include: {
         animal: { select: { id: true, nombre: true } },
-        cuenta: { select: { id: true, nombre: true, apellido: true, tipo: true } },
+        cuenta: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            tipo: true,
+            disponibleCuidado: true,
+          },
+        },
       },
     });
   });
