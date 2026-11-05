@@ -50,6 +50,16 @@ export async function listarAdopciones(req, res) {
   }
 }
 
+// GET /adopciones/animales-en-proceso
+export async function listarAnimalesEnProceso(req, res) {
+  try {
+    const animalIds = await adopcionService.listarAnimalesEnProceso();
+    res.json(animalIds);
+  } catch (error) {
+    manejarError(res, error);
+  }
+}
+
 export async function obtenerAdopcion(req, res) {
   try {
     const id = parseId(req.params.id);
