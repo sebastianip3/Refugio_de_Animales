@@ -13,6 +13,7 @@ const SECCIONES = [
   { id: "animales", label: "Animales", icono: "🐾" },
   { id: "adopciones", label: "Adopciones", icono: "🏡" },
   { id: "historial", label: "Historial clínico", icono: "🩺" },
+  { id: "cuidados", label: "Cuidados", icono: "🤝" },
   { id: "insumos", label: "Insumos", icono: "📦" },
   { id: "voluntariado", label: "Voluntariado", icono: "🤝" },
   { id: "trabajadores", label: "Trabajadores", icono: "👥" },
