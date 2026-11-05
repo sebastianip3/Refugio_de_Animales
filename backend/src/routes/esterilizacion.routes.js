@@ -5,7 +5,7 @@ import{
     crearInscripcion, listarInscripciones, obtenerInscripcion, actualizarInscripcion, reenviarComprobante,
 } from '../controllers/esterilizacion.controller.js';
 
-const router = Router;
+const router = Router();
 
 // jornadas
 router.get('/jornadas', listarJornadas);
