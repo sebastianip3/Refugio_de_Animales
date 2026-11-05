@@ -36,11 +36,23 @@ function manejarErrorCuenta(res, error) {
 export async function iniciarSesion(req, res) {
   try {
     const { correo, contrasena } = loginCuentaSchema.parse(req.body);
-    const resultado = await authService.iniciarSesion(correo, contrasena);
-    return res.json(resultado);
+    const { token, cuenta } = await authService.iniciarSesion(correo, contrasena);
+
+    // El token no va en la respuesta: queda en la cookie httpOnly
+    res.cookie(authService.COOKIE_SESION, token, {
+      ...authService.opcionesCookieSesion,
+      maxAge: authService.DURACION_SESION_MS,
+    });
+    return res.json({ cuenta });
   } catch (error) {
     return manejarErrorCuenta(res, error);
   }
+}
+
+// POST /cuentas/logout
+export function cerrarSesion(req, res) {
+  res.clearCookie(authService.COOKIE_SESION, authService.opcionesCookieSesion);
+  return res.status(204).end();
 }
 
 // GET /cuentas/perfil: datos de la cuenta con sesión iniciada (sin la contraseña)
