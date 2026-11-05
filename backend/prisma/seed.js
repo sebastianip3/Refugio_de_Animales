@@ -1,4 +1,14 @@
+import bcrypt from 'bcryptjs';
 import prisma from '../src/config/prisma.js';
+
+// Cuenta para entrar como encargado de adopciones en desarrollo.
+// La contraseña se lee de ENCARGADO_CONTRASENA en backend/.env para no dejarla en el repositorio
+const encargado = {
+  nombre: 'Encargado',
+  apellido: 'Adopciones',
+  tipo: 'ENCARGADO_ADOPCIONES',
+  correo: 'encargado@refugio.cl',
+};
 
 const especies = [
   { nombre: 'Perro', descripcion: 'Canis lupus familiaris' },
@@ -72,6 +82,19 @@ async function main() {
     });
   }
   console.log(`=> ${especies.length} especies cargadas`);
+
+  // Si la cuenta ya existe no se modifica, para no pisar una contraseña cambiada
+  const contrasena = process.env.ENCARGADO_CONTRASENA;
+  if (contrasena) {
+    await prisma.cuenta.upsert({
+      where: { correo: encargado.correo },
+      update: {},
+      create: { ...encargado, contrasenaHash: await bcrypt.hash(contrasena, 10) },
+    });
+    console.log(`=> cuenta de encargado de adopciones: ${encargado.correo}`);
+  } else {
+    console.log('=> cuenta de encargado omitida: falta ENCARGADO_CONTRASENA en backend/.env');
+  }
 
   // Solo se cargan una vez, para no duplicar animales al volver a ejecutar el seed
   if ((await prisma.registroClinico.count()) > 0) return;
