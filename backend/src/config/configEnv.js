@@ -11,6 +11,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 export const HOST = process.env.HOST || 'localhost';
 export const PORT = process.env.PORT || 3000;
 export const DATABASE_URL = process.env.DATABASE_URL;
+export const JWT_SECRET = process.env.JWT_SECRET;
 
 // Variables de Email
 export const EMAIL_USER = process.env.EMAIL_USER;

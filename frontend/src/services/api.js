@@ -21,6 +21,7 @@ async function request(path, options = {}) {
 export const animalesApi = {
   listar: () => request("/animales"),
   obtener: (id) => request(`/animales/${id}`),
+  historial: (id) => request(`/animales/${id}/historial`),
   crear: (animal) => request("/animales", { method: "POST", body: JSON.stringify(animal) }),
   actualizar: (id, animal) =>
     request(`/animales/${id}`, { method: "PATCH", body: JSON.stringify(animal) }),

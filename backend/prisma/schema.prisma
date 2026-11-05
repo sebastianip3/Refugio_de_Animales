@@ -64,6 +64,31 @@ enum EstadoCorreo {
   FALLIDO
 }
 
+enum TipoCuenta {
+  ADMINISTRADOR
+  VOLUNTARIO
+  TRABAJADOR
+  ENCARGADO_ADOPCIONES
+}
+
+model Cuenta {
+  id                 Int        @id @default(autoincrement())
+  nombre             String     @db.VarChar(100)
+  apellido           String     @db.VarChar(100)
+  tipo               TipoCuenta @default(VOLUNTARIO)
+  correo             String     @unique @db.VarChar(254)
+  contrasenaHash     String     @db.VarChar(255)
+  horario            String?    @db.VarChar(255)
+  disponibleCuidado Boolean?   @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  cuidados CuidadoAnimal[]
+
+  @@index([tipo, disponibleCuidado])
+  @@map("cuentas")
+}
+
 model Especie {
   id          Int      @id @default(autoincrement())
   nombre      String   @unique @db.VarChar(80)
@@ -101,9 +126,27 @@ model Animal {
 
   adopciones        Adopcion[]
   registrosClinicos RegistroClinico[]
+  cuidados          CuidadoAnimal[]
 
   @@index([estado])
   @@map("animales")
+}
+
+model CuidadoAnimal {
+  id          Int      @id @default(autoincrement())
+  fechaInicio DateTime
+  fechaFin    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  animalId Int
+  animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
+  cuentaId Int
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
+
+  @@index([animalId, fechaInicio, fechaFin])
+  @@index([cuentaId, fechaInicio, fechaFin])
+  @@map("cuidados_animales")
 }
 
 model Adopcion {

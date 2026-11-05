@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "TipoCuenta" ADD VALUE 'ENCARGADO_ADOPCIONES';
+
