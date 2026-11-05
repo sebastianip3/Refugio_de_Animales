@@ -42,4 +42,5 @@ export const updateInscripcionSchema = z
     estado: z.enum(ESTADOS_INSCRIPCION.filter((e) => e !== 'CONFIRMADA')),
     observaciones: z.string().trim().nullish(),
   })
-  .partial();
+  .partial()
+  .strict();
