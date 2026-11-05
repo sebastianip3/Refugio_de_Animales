@@ -43,6 +43,11 @@ export async function iniciarSesion(req, res) {
   }
 }
 
+// GET /cuentas/perfil: datos de la cuenta con sesión iniciada (sin la contraseña)
+export function obtenerPerfil(req, res) {
+  return res.json(req.cuenta);
+}
+
 export async function cambiarCorreo(req, res) {
   try {
     const { correo, contrasena } = cambiarCorreoCuentaSchema.parse(req.body);
