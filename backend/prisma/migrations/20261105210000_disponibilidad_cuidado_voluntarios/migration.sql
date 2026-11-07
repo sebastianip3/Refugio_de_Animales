@@ -2,8 +2,10 @@ ALTER TABLE "cuentas"
     ADD COLUMN "disponibleCuidado" BOOLEAN;
 
 UPDATE "cuentas"
-SET "disponibleCuidado" = false
-WHERE "tipo" = 'VOLUNTARIO';
+SET "disponibleCuidado" = CASE
+    WHEN "tipo" = 'VOLUNTARIO' THEN true
+    ELSE NULL
+END;
 
 ALTER TABLE "cuentas"
     ADD CONSTRAINT "cuentas_disponibilidad_cuidado_tipo_check"
