@@ -25,7 +25,7 @@ const estiloError = {
   marginTop: "4px",
 };
 
-function RegistroPage({ onRegistro }) {
+function RegistroPage({ onRegistro, onIrALogin }) {
   const {
     register,
     handleSubmit,
@@ -210,6 +210,24 @@ function RegistroPage({ onRegistro }) {
               : "Crear cuenta"}
           </button>
         </form>
+
+        {onIrALogin && (
+          <button
+            type="button"
+            onClick={onIrALogin}
+            style={{
+              width: "100%",
+              marginTop: "12px",
+              padding: "8px",
+              border: "none",
+              background: "none",
+              color: "#2563eb",
+              cursor: "pointer",
+            }}
+          >
+            ¿Eres parte del refugio? Iniciar sesión
+          </button>
+        )}
       </section>
     </main>
   );
