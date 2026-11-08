@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../config/prisma.js';
 import { JWT_SECRET } from '../config/configEnv.js';
+import { COOKIE_SESION } from '../services/auth.service.js';
 
-// Lee el token "Authorization: Bearer <token>" y deja la cuenta en req.cuenta.
+// Lee el token de la cookie de sesión y deja la cuenta en req.cuenta.
 // La cuenta se busca en la BD para usar su rol actual y no el guardado en el token.
 export async function autenticar(req, res, next) {
-  const [esquema, token] = (req.headers.authorization ?? '').split(' ');
-  if (esquema !== 'Bearer' || !token) {
+  const token = req.cookies?.[COOKIE_SESION];
+  if (!token) {
     return res.status(401).json({ message: 'Debes iniciar sesión' });
   }
 
