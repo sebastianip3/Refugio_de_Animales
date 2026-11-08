@@ -72,18 +72,20 @@ enum TipoCuenta {
 }
 
 model Cuenta {
-  id             Int        @id @default(autoincrement())
-  nombre         String     @db.VarChar(100)
-  apellido       String     @db.VarChar(100)
-  tipo           TipoCuenta @default(VOLUNTARIO)
-  correo         String     @unique @db.VarChar(254)
-  contrasenaHash String     @db.VarChar(255)
-  horario        String?    @db.VarChar(255)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                 Int        @id @default(autoincrement())
+  nombre             String     @db.VarChar(100)
+  apellido           String     @db.VarChar(100)
+  tipo               TipoCuenta @default(VOLUNTARIO)
+  correo             String     @unique @db.VarChar(254)
+  contrasenaHash     String     @db.VarChar(255)
+  horario            String?    @db.VarChar(255)
+  disponibleCuidado Boolean?   @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   cuidados CuidadoAnimal[]
 
+  @@index([tipo, disponibleCuidado])
   @@map("cuentas")
 }
 
@@ -201,7 +203,7 @@ model JornadaEsterilizacion {
   comuna       String   @db.VarChar(100)
   sector       String?  @db.VarChar(100)
   cuposTotales Int
-  activa       Boolean  @default(true)
+  activa       Boolean  @default(false)
 
   // El sistema las incluye en el correo de confirmación
   indicacionesPostOperatorias String   @db.Text

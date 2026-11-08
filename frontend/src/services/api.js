@@ -57,3 +57,7 @@ export const adopcionesApi = {
   actualizar: (id, cambios) =>
     request(`/adopciones/${id}`, { method: "PATCH", body: JSON.stringify(cambios) }),
 };
+
+export const cuidadosApi = {
+  listarVoluntariosDisponibles: () => request("/cuidados/voluntarios-disponibles"),
+};

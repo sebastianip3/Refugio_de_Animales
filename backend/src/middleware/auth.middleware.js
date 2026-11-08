@@ -18,7 +18,7 @@ export async function autenticar(req, res, next) {
 
   let payload;
   try {
-    payload = jwt.verify(token, JWT_SECRET);
+    payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
   } catch {
     return res.status(401).json({ message: 'Sesión inválida o expirada' });
   }

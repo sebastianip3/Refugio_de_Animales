@@ -4,6 +4,7 @@ import {
   cerrarSesion,
   obtenerPerfil,
   cambiarCorreo,
+  cambiarDisponibilidadCuidado,
 } from '../controllers/cuenta.controller.js';
 import { autenticar } from '../middleware/auth.middleware.js';
 
@@ -13,5 +14,6 @@ router.post('/login', iniciarSesion);
 router.post('/logout', cerrarSesion);
 router.get('/perfil', autenticar, obtenerPerfil);
 router.patch('/correo', autenticar, cambiarCorreo);
+router.patch('/disponibilidad-cuidado', autenticar, cambiarDisponibilidadCuidado);
 
 export default router;

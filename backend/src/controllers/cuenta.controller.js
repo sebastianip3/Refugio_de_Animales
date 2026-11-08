@@ -2,7 +2,11 @@ import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import * as authService from '../services/auth.service.js';
 import * as cuentaService from '../services/cuenta.service.js';
-import { cambiarCorreoCuentaSchema, loginCuentaSchema } from '../schema/cuenta.schema.js';
+import {
+  cambiarDisponibilidadCuidadoSchema,
+  cambiarCorreoCuentaSchema,
+  loginCuentaSchema,
+} from '../schema/cuenta.schema.js';
 import { AppError } from '../utils/app-error.js';
 
 function manejarErrorCuenta(res, error) {
@@ -64,6 +68,19 @@ export async function cambiarCorreo(req, res) {
   try {
     const { correo, contrasena } = cambiarCorreoCuentaSchema.parse(req.body);
     const cuenta = await cuentaService.cambiarCorreo(req.cuenta.id, correo, contrasena);
+    return res.json(cuenta);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function cambiarDisponibilidadCuidado(req, res) {
+  try {
+    const { disponibleCuidado } = cambiarDisponibilidadCuidadoSchema.parse(req.body);
+    const cuenta = await cuentaService.cambiarDisponibilidadCuidado(
+      req.cuenta.id,
+      disponibleCuidado,
+    );
     return res.json(cuenta);
   } catch (error) {
     return manejarErrorCuenta(res, error);
