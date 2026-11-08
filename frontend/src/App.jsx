@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import RegistroPage from "./pages/RegistroPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
 import InicioPage from "./pages/InicioPage.jsx";
 import AnimalesPage from "./pages/AnimalesPage.jsx";
 import AdopcionesPage from "./pages/AdopcionesPage.jsx";
 import HistorialPage from "./pages/HistorialPage.jsx";
 import Layout from "./components/Layout.jsx";
+import { cuentasApi, EVENTO_SESION_CERRADA } from "./services/api.js";
 
 const PAGINAS = {
   inicio: InicioPage,
@@ -16,11 +18,58 @@ const PAGINAS = {
 function App() {
   const [registrado, setRegistrado] = useState(false);
   const [pagina, setPagina] = useState("inicio");
+  // Cuenta del personal con sesión iniciada; null para los adoptantes
+  const [cuenta, setCuenta] = useState(null);
+  const [enLogin, setEnLogin] = useState(false);
+  const [cargandoSesion, setCargandoSesion] = useState(true);
 
-  if (!registrado) {
+  const volverAlInicio = () => {
+    setCuenta(null);
+    setRegistrado(false);
+    setEnLogin(false);
+    setPagina("inicio");
+  };
+
+  // El backend borra la cookie de sesión
+  const cerrarSesion = async () => {
+    await cuentasApi.logout().catch(() => {});
+    volverAlInicio();
+  };
+
+  // JavaScript no puede leer la cookie httpOnly, así que al cargar se pregunta
+  // al backend si hay una sesión abierta (si no la hay, responde 401)
+  useEffect(() => {
+    cuentasApi
+      .perfil()
+      .then(setCuenta)
+      .catch(() => {})
+      .finally(() => setCargandoSesion(false));
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(EVENTO_SESION_CERRADA, volverAlInicio);
+    return () => window.removeEventListener(EVENTO_SESION_CERRADA, volverAlInicio);
+  }, []);
+
+  if (cargandoSesion) return <p>Cargando...</p>;
+
+  if (!registrado && !cuenta) {
+    if (enLogin) {
+      return (
+        <LoginPage
+          onLogin={(cuentaIniciada) => {
+            setCuenta(cuentaIniciada);
+            setEnLogin(false);
+          }}
+          onVolver={() => setEnLogin(false)}
+        />
+      );
+    }
+
     return (
       <RegistroPage
         onRegistro={() => setRegistrado(true)}
+        onIrALogin={() => setEnLogin(true)}
       />
     );
   }
@@ -28,7 +77,16 @@ function App() {
   const Pagina = PAGINAS[pagina];
 
   return (
-    <Layout paginaActual={pagina} onNavegar={setPagina}>
+    <Layout
+      paginaActual={pagina}
+      onNavegar={setPagina}
+      cuenta={cuenta}
+      onCerrarSesion={cerrarSesion}
+      onIniciarSesion={() => {
+        setRegistrado(false);
+        setEnLogin(true);
+      }}
+    >
       {Pagina ? <Pagina /> : <p>Sección en construcción.</p>}
     </Layout>
   );
