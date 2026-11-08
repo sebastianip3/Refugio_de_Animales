@@ -21,7 +21,9 @@ const SECCIONES = [
 
 const drawerWidth = 260;
 
-function Layout({ children, paginaActual, onNavegar }) {
+const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
+
+function Layout({ children, paginaActual, onNavegar, cuenta, onCerrarSesion, onIniciarSesion }) {
   return (
     <Box
       sx={{
@@ -128,6 +130,34 @@ function Layout({ children, paginaActual, onNavegar }) {
             </ListItemButton>
           ))}
         </List>
+
+        <Box sx={{ mt: "auto", px: 3, py: 2, borderTop: "1px solid #374151" }}>
+          {cuenta ? (
+            <>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {cuenta.nombre} {cuenta.apellido}
+              </Typography>
+
+              <Typography variant="body2" sx={{ color: "#9ca3af", mb: 1 }}>
+                {formatearEnum(cuenta.tipo)}
+              </Typography>
+
+              <ListItemButton
+                onClick={onCerrarSesion}
+                sx={{ borderRadius: 2, color: "#d1d5db", "&:hover": { backgroundColor: "#374151" } }}
+              >
+                Cerrar sesión
+              </ListItemButton>
+            </>
+          ) : (
+            <ListItemButton
+              onClick={onIniciarSesion}
+              sx={{ borderRadius: 2, color: "#d1d5db", "&:hover": { backgroundColor: "#374151" } }}
+            >
+              Iniciar sesión (personal)
+            </ListItemButton>
+          )}
+        </Box>
       </Drawer>
 
       <Box
