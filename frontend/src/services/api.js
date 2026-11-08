@@ -52,6 +52,7 @@ export const cuentasApi = {
 
 export const adopcionesApi = {
   listar: () => request("/adopciones"),
+  animalesEnProceso: () => request("/adopciones/animales-en-proceso"),
   obtener: (id) => request(`/adopciones/${id}`),
   crear: (adopcion) => request("/adopciones", { method: "POST", body: JSON.stringify(adopcion) }),
   actualizar: (id, cambios) =>
