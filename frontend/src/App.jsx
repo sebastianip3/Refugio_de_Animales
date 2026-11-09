@@ -6,6 +6,7 @@ import AnimalesPage from "./pages/AnimalesPage.jsx";
 import AdopcionesPage from "./pages/AdopcionesPage.jsx";
 import HistorialPage from "./pages/HistorialPage.jsx";
 import CuidadosPage from "./pages/CuidadosPage.jsx";
+import PerfilPage from "./pages/PerfilPage.jsx";
 import Layout from "./components/Layout.jsx";
 import { cuentasApi, EVENTO_SESION_CERRADA } from "./services/api.js";
 
@@ -15,6 +16,7 @@ const PAGINAS = {
   adopciones: AdopcionesPage,
   historial: HistorialPage,
   cuidados: CuidadosPage,
+  perfil: PerfilPage,
 };
 
 function App() {
@@ -89,7 +91,11 @@ function App() {
         setEnLogin(true);
       }}
     >
-      {Pagina ? <Pagina /> : <p>Sección en construcción.</p>}
+      {Pagina ? (
+        <Pagina cuenta={cuenta} onNavegar={setPagina} />
+      ) : (
+        <p>Sección en construcción.</p>
+      )}
     </Layout>
   );
 }
