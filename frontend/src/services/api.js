@@ -43,3 +43,33 @@ export const adopcionesApi = {
 export const cuidadosApi = {
   listarVoluntariosDisponibles: () => request("/cuidados/voluntarios-disponibles"),
 };
+
+export const esterilizacionApi = {
+// comunidad
+  listarJornadasDisponibles: () => request("/esterilizacion/jornadas/disponibles"),
+  crearInscripcion: (jornadaId, datos) =>
+    request(`/esterilizacion/jornadas/${jornadaId}/inscripciones`, {method: "POST", body: JSON.stringify(datos),}),
+
+// jornadas (admin) 
+  listarJornadas: () => request("/esterilizacion/jornadas"),
+  crearJornada: (jornada) => 
+    request("/esterilizacion/jornadas", {method: "POST", body: JSON.stringify(jornada)}),
+  actualizarJornada: (id, cambios)  =>
+    request(`/esterilizacion/jornadas/${id}`, {method: "PATCH", body: JSON.stringify(cambios)}),
+  abrirFormulario: (id) =>
+    request(`/esterilizacion/jornadas/${id}/abrir`, {method: "PATCH"}),
+  cerrarFormulario: (id) =>
+    request(`/esterilizacion/jornadas/${id}/cerrar`, {method: "PATCH"}),
+  eliminarJornada: (id) =>
+    request(`/esterilizacion/jornadas/${id}`, {method: "DELETE"}),
+
+// inscripciones (admin)
+listarInscripciones: (jornadaId) =>
+   request(`/esterilizacion/jornadas/${jornadaId}/inscripciones`),
+ActualizarInscripcion: (id , cambios) =>
+  request(`/esterilizacion/inscripciones/${id}`, {method: "PATCH", body: JSON.stringify(cambios)}),
+obtenerInscripcion: (inscripcionId) =>
+  request(`/esterilizacion/inscripciones/${inscripcionId}`),
+reenviarComprobante: (id) =>
+  request(`/esterilizacion/inscripciones/${id}/reenviar-comprobante`, {method: "POST"}),
+};
