@@ -26,7 +26,7 @@ const rutSchema = z
   export const inscripcionFormSchema = z.object({
     especieId: z.coerce.number().int().positive("Debe seleccionar especie"),
     sexo: z.enum(["MACHO", "HEMBRA"], {error: "Debe seleccionar sexo"}),
-    tamano: z.enum(["PEQUEÑO", "MEDIANO", "GRANDE"], {error: "Debe seleccionar tamaño"}),
+    tamano: z.enum(["PEQUENO", "MEDIANO", "GRANDE"], {error: "Debe seleccionar tamaño"}),
     pesoEstimado: z.coerce
         .number({error: "Ingrese un número"})
         .positive("El peso debe ser mayor a 0")
@@ -35,6 +35,6 @@ const rutSchema = z
     tutorApellido: z.string().trim().min(2,"Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
     tutorRut: rutSchema,
     tutorEmail: z.string().trim().email("Correo invalido").max(150, "Maximo 150 caracteres"),
-    tutorComuna: z.string().trim().min(2, "Minimo 2 caracteres").max(150, "Maximo 150 caracteres"),
-    tutorSector: z.string().trim().min(2, "Minimo 2 caracteres").max(150, "Maximo 150 caracteres"),
+    tutorComuna: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
+    tutorSector: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
   });
