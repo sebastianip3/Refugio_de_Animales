@@ -135,13 +135,27 @@ function Layout({ children, paginaActual, onNavegar, cuenta, onCerrarSesion, onI
         <Box sx={{ mt: "auto", px: 3, py: 2, borderTop: "1px solid #374151" }}>
           {cuenta ? (
             <>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {cuenta.nombre} {cuenta.apellido}
-              </Typography>
+              <ListItemButton
+                selected={paginaActual === "perfil"}
+                onClick={() => onNavegar("perfil")}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  "&:hover": { backgroundColor: "#374151" },
+                  "&.Mui-selected": { backgroundColor: "#2563eb" },
+                  "&.Mui-selected:hover": { backgroundColor: "#1d4ed8" },
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  👤 {cuenta.nombre} {cuenta.apellido}
+                </Typography>
 
-              <Typography variant="body2" sx={{ color: "#9ca3af", mb: 1 }}>
-                {formatearEnum(cuenta.tipo)}
-              </Typography>
+                <Typography variant="body2" sx={{ color: "#9ca3af" }}>
+                  {formatearEnum(cuenta.tipo)} · Mi perfil
+                </Typography>
+              </ListItemButton>
 
               <ListItemButton
                 onClick={onCerrarSesion}
