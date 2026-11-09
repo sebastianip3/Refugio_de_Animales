@@ -4,8 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { adopcionesApi, animalesApi } from "../services/api.js";
 import { adopcionFormSchema } from "../schemas/adopcion.schema.js";
-
-const ESTADOS_EN_PROCESO = ["PENDIENTE", "EN_REVISION"];
+import { puedeEvaluarAdopciones } from "../utils.js";
 
 const ACCIONES = {
   PENDIENTE: [
@@ -94,9 +93,12 @@ const estiloError = {
   marginBottom: "10px",
 };
 
-function AdopcionesPage() {
+function AdopcionesPage({ cuenta }) {
+  const esEncargado = puedeEvaluarAdopciones(cuenta);
+
   const [adopciones, setAdopciones] = useState([]);
   const [animales, setAnimales] = useState([]);
+  const [idsEnProceso, setIdsEnProceso] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorServidor, setErrorServidor] =
     useState("");
@@ -122,14 +124,17 @@ function AdopcionesPage() {
     try {
       setCargando(true);
 
-      const [listaAdopciones, listaAnimales] =
+      // La lista de solicitudes tiene datos personales: solo se pide si es el encargado
+      const [listaAnimales, enProceso, listaAdopciones] =
         await Promise.all([
-          adopcionesApi.listar(),
           animalesApi.listar(),
+          adopcionesApi.animalesEnProceso(),
+          esEncargado ? adopcionesApi.listar() : [],
         ]);
 
-      setAdopciones(listaAdopciones);
       setAnimales(listaAnimales);
+      setIdsEnProceso(enProceso);
+      setAdopciones(listaAdopciones);
       setErrorServidor("");
     } catch (err) {
       setErrorServidor(
@@ -142,17 +147,9 @@ function AdopcionesPage() {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [esEncargado]);
 
-  const animalesEnProceso = new Set(
-    adopciones
-      .filter((adopcion) =>
-        ESTADOS_EN_PROCESO.includes(
-          adopcion.estado
-        )
-      )
-      .map((adopcion) => adopcion.animalId)
-  );
+  const animalesEnProceso = new Set(idsEnProceso);
 
   const animalesDisponibles = animales.filter(
     (animal) => animal.estado !== "ADOPTADO"
@@ -567,219 +564,224 @@ function AdopcionesPage() {
         </button>
       </form>
 
-      <h3
-        style={{
-          marginTop: "40px",
-          marginBottom: "20px",
-          fontSize: "2em",
-          color: "#030507",
-        }}
-      >
-        Solicitudes
-      </h3>
-
-      {cargando ? (
-        <p>Cargando...</p>
-      ) : adopciones.length === 0 ? (
-        <p
-          style={{
-            color: "crimson",
-            fontWeight: "bold",
-            fontSize: "1.5em",
-          }}
-        >
-          No hay solicitudes de adopción.
-        </p>
-      ) : (
-        <table
-          border="1"
-          cellPadding="6"
-        >
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Animal</th>
-              <th>Adoptante</th>
-              <th>RUT</th>
-              <th>Contacto</th>
-              <th>Comuna</th>
-              <th>Fecha</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {adopciones.map(
-              (adopcion) => (
-                <tr key={adopcion.id}>
-                  <td>{adopcion.id}</td>
-
-                  <td>
-                    {nombreAnimal(
-                      adopcion.animal
-                    )}
-                  </td>
-
-                  <td>
-                    {adopcion.nombre}
-                  </td>
-
-                  <td>
-                    {adopcion.rut}
-                  </td>
-
-                  <td>
-                    {adopcion.email}
-                    <br />
-                    {adopcion.telefono}
-                  </td>
-
-                  <td>
-                    {adopcion.comuna}
-                  </td>
-
-                  <td>
-                    {new Date(
-                      adopcion.fechaSolicitud
-                    ).toLocaleDateString(
-                      "es-CL"
-                    )}
-                  </td>
-
-                  <td>
-                    {formatearEnum(
-                      adopcion.estado
-                    )}
-                  </td>
-
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAbrirFicha(
-                          adopcion
-                        )
-                      }
-                    >
-                      {ACCIONES[adopcion.estado]
-                        ? "Evaluar"
-                        : "Ver ficha"}
-                    </button>
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      )}
-
-      {fichaAbierta && (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            borderRadius: "8px",
-            padding: "24px",
-            marginTop: "30px",
-          }}
-        >
+      {/* Solo el encargado ve y evalúa las solicitudes */}
+      {esEncargado && (
+        <>
           <h3
             style={{
-              marginTop: 0,
-              fontSize: "1.5em",
+              marginTop: "40px",
+              marginBottom: "20px",
+              fontSize: "2em",
               color: "#030507",
             }}
           >
-            Solicitud #{fichaAbierta.id}:{" "}
-            {nombreAnimal(fichaAbierta.animal)}
+            Solicitudes
           </h3>
 
-          <p>
-            Estado:{" "}
-            {formatearEnum(fichaAbierta.estado)}
-          </p>
-
-          {errorServidor && (
-            <p style={{ color: "crimson" }}>
-              {errorServidor}
+          {cargando ? (
+            <p>Cargando...</p>
+          ) : adopciones.length === 0 ? (
+            <p
+              style={{
+                color: "crimson",
+                fontWeight: "bold",
+                fontSize: "1.5em",
+              }}
+            >
+              No hay solicitudes de adopción.
             </p>
-          )}
-
-          <table
-            border="1"
-            cellPadding="6"
-          >
-            <tbody>
-              {CAMPOS_FICHA.map(
-                ({ campo, label }) => (
-                  <tr key={campo}>
-                    <th>{label}</th>
-                    <td>
-                      {fichaAbierta[campo] ||
-                        "—"}
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-
-          {ACCIONES[fichaAbierta.estado] ? (
-            <>
-              <div>
-                <label
-                  htmlFor="observacionesEvaluacion"
-                  style={{ fontSize: "1.2em" }}
-                >
-                  <br />
-                  Observaciones de la evaluación
-                </label>
-
-                <br />
-
-                <textarea
-                  id="observacionesEvaluacion"
-                  value={observaciones}
-                  onChange={(e) =>
-                    setObservaciones(
-                      e.target.value
-                    )
-                  }
-                  style={estiloCampo}
-                />
-              </div>
-
-              {ACCIONES[
-                fichaAbierta.estado
-              ].map((accion) => (
-                <button
-                  key={accion.estado}
-                  type="button"
-                  onClick={() =>
-                    handleCambiarEstado(
-                      fichaAbierta,
-                      accion.estado
-                    )
-                  }
-                >
-                  {accion.label}
-                </button>
-              ))}
-            </>
           ) : (
-            <p>
-              Observaciones:{" "}
-              {fichaAbierta.observaciones || "—"}
-            </p>
+            <table
+              border="1"
+              cellPadding="6"
+            >
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Animal</th>
+                  <th>Adoptante</th>
+                  <th>RUT</th>
+                  <th>Contacto</th>
+                  <th>Comuna</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {adopciones.map(
+                  (adopcion) => (
+                    <tr key={adopcion.id}>
+                      <td>{adopcion.id}</td>
+
+                      <td>
+                        {nombreAnimal(
+                          adopcion.animal
+                        )}
+                      </td>
+
+                      <td>
+                        {adopcion.nombre}
+                      </td>
+
+                      <td>
+                        {adopcion.rut}
+                      </td>
+
+                      <td>
+                        {adopcion.email}
+                        <br />
+                        {adopcion.telefono}
+                      </td>
+
+                      <td>
+                        {adopcion.comuna}
+                      </td>
+
+                      <td>
+                        {new Date(
+                          adopcion.fechaSolicitud
+                        ).toLocaleDateString(
+                          "es-CL"
+                        )}
+                      </td>
+
+                      <td>
+                        {formatearEnum(
+                          adopcion.estado
+                        )}
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAbrirFicha(
+                              adopcion
+                            )
+                          }
+                        >
+                          {ACCIONES[adopcion.estado]
+                            ? "Evaluar"
+                            : "Ver ficha"}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
           )}
 
-          <button
-            type="button"
-            onClick={() => setFichaAbierta(null)}
-          >
-            Cerrar
-          </button>
-        </div>
+          {fichaAbierta && (
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "8px",
+                padding: "24px",
+                marginTop: "30px",
+              }}
+            >
+              <h3
+                style={{
+                  marginTop: 0,
+                  fontSize: "1.5em",
+                  color: "#030507",
+                }}
+              >
+                Solicitud #{fichaAbierta.id}:{" "}
+                {nombreAnimal(fichaAbierta.animal)}
+              </h3>
+
+              <p>
+                Estado:{" "}
+                {formatearEnum(fichaAbierta.estado)}
+              </p>
+
+              {errorServidor && (
+                <p style={{ color: "crimson" }}>
+                  {errorServidor}
+                </p>
+              )}
+
+              <table
+                border="1"
+                cellPadding="6"
+              >
+                <tbody>
+                  {CAMPOS_FICHA.map(
+                    ({ campo, label }) => (
+                      <tr key={campo}>
+                        <th>{label}</th>
+                        <td>
+                          {fichaAbierta[campo] ||
+                            "—"}
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+
+              {ACCIONES[fichaAbierta.estado] ? (
+                <>
+                  <div>
+                    <label
+                      htmlFor="observacionesEvaluacion"
+                      style={{ fontSize: "1.2em" }}
+                    >
+                      <br />
+                      Observaciones de la evaluación
+                    </label>
+
+                    <br />
+
+                    <textarea
+                      id="observacionesEvaluacion"
+                      value={observaciones}
+                      onChange={(e) =>
+                        setObservaciones(
+                          e.target.value
+                        )
+                      }
+                      style={estiloCampo}
+                    />
+                  </div>
+
+                  {ACCIONES[
+                    fichaAbierta.estado
+                  ].map((accion) => (
+                    <button
+                      key={accion.estado}
+                      type="button"
+                      onClick={() =>
+                        handleCambiarEstado(
+                          fichaAbierta,
+                          accion.estado
+                        )
+                      }
+                    >
+                      {accion.label}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <p>
+                  Observaciones:{" "}
+                  {fichaAbierta.observaciones || "—"}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setFichaAbierta(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
