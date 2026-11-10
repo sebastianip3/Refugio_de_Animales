@@ -2,7 +2,6 @@ import { Router } from 'express';
 import {
   listarAnimales,
   obtenerAnimal,
-  obtenerHistorialClinico,
   crearAnimal,
   actualizarAnimal,
   eliminarAnimal,
@@ -12,7 +11,6 @@ const router = Router();
 
 router.get('/', listarAnimales);
 router.get('/:id', obtenerAnimal);
-router.get('/:id/historial', obtenerHistorialClinico);
 router.post('/', crearAnimal);
 router.patch('/:id', actualizarAnimal);
 router.delete('/:id', eliminarAnimal);
