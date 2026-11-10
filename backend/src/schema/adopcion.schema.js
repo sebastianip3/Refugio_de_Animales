@@ -28,15 +28,33 @@ export const rutSchema = z
   .transform((valor) => valor.replace(/\./g, '').replace(/-/g, '').toUpperCase())
   .refine((valor) => /^\d{7,8}[\dK]$/.test(valor), 'Formato de RUT inválido')
   .transform((valor) => `${valor.slice(0, -1)}-${valor.slice(-1)}`)
-  .refine(rutValido, 'Dígito verificador del RUT inválido');
+  .refine(rutValido, 'Dígito verificador del RUT inválido')
+  // RUT de prueba como 11.111.111-1 cumplen el dígito verificador, pero no son reales
+  .refine((valor) => !/^(\d)\1+-/.test(valor), 'RUT inválido');
+
+export const correoSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, 'El correo es demasiado largo')
+  .email('Correo electrónico inválido');
+
+// Teléfono chileno: 9 dígitos (celular 9XXXXXXXX o fijo con código de área),
+// con o sin +56. Acepta espacios, guiones y paréntesis y lo guarda como "+56912345678"
+export const telefonoSchema = z
+  .string()
+  .trim()
+  .transform((valor) => valor.replace(/[\s\-().]/g, '').replace(/^(\+?56)/, ''))
+  .refine((valor) => /^[2-9]\d{8}$/.test(valor), 'Teléfono inválido: debe tener 9 dígitos')
+  .transform((valor) => `+56${valor}`);
 
 // Ficha que llena el adoptante. El estado no se recibe: siempre parte en PENDIENTE
 export const adopcionSchema = z.object({
   animalId: z.number().int().positive(),
   nombre: z.string().trim().min(2).max(100),
   rut: rutSchema,
-  email: z.string().trim().email(),
-  telefono: z.string().trim().min(8).max(15),
+  email: correoSchema,
+  telefono: telefonoSchema,
   direccion: z.string().trim().min(3).max(255),
   comuna: z.string().trim().min(2).max(100),
   tipoVivienda: z.string().trim().max(100).nullish(),
