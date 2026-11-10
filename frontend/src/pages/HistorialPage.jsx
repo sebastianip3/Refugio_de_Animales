@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
-import { animalesApi } from "../services/api.js";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { animalesApi, registrosClinicosApi } from "../services/api.js";
+import {
+  registroClinicoFormSchema,
+  TIPOS_REGISTRO_CLINICO,
+  hoyComoTexto,
+} from "../schemas/registroClinico.schema.js";
+import { puedeEditarHistorial } from "../utils.js";
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
-const formatearFecha = (fecha) => new Date(fecha).toLocaleDateString("es-CL");
+// La fecha se guarda a medianoche UTC; sin timeZone se mostraría el día anterior en Chile
+const formatearFecha = (fecha) =>
+  new Date(fecha).toLocaleDateString("es-CL", { timeZone: "UTC" });
 
 const nombreAnimal = (animal) =>
   `${animal.nombre || "Sin nombre"} (#${animal.id}, ${animal.especie?.nombre ?? "?"})`;
@@ -15,20 +25,80 @@ const estiloBoton = {
   cursor: "pointer",
 };
 
-// Vista de consulta para adoptantes: muestra los antecedentes veterinarios
-// sin ningún control de edición
-function HistorialPage() {
+const estiloCampo = {
+  width: "100%",
+  backgroundColor: "#ffffff",
+  border: "1px solid #ccc",
+  borderRadius: "4px",
+  padding: "8px",
+  marginTop: "5px",
+  boxSizing: "border-box",
+};
+
+const estiloError = {
+  color: "crimson",
+  fontSize: "0.85em",
+  marginTop: "2px",
+};
+
+const formularioVacio = (cuenta) => ({
+  fecha: hoyComoTexto(),
+  tipo: "",
+  descripcion: "",
+  diagnostico: "",
+  tratamiento: "",
+  // Por defecto el veterinario con sesión iniciada; se puede cambiar
+  veterinario: cuenta ? `${cuenta.nombre} ${cuenta.apellido}` : "",
+  observaciones: "",
+});
+
+const aFormulario = (registro) => ({
+  fecha: registro.fecha.slice(0, 10),
+  tipo: registro.tipo,
+  descripcion: registro.descripcion,
+  diagnostico: registro.diagnostico ?? "",
+  tratamiento: registro.tratamiento ?? "",
+  veterinario: registro.veterinario ?? "",
+  observaciones: registro.observaciones ?? "",
+});
+
+// Campos opcionales del formulario (los que se llenan "cuando corresponde")
+const CAMPOS_TEXTO = [
+  { nombre: "diagnostico", etiqueta: "Diagnóstico" },
+  { nombre: "tratamiento", etiqueta: "Tratamiento" },
+  { nombre: "observaciones", etiqueta: "Observaciones adicionales" },
+];
+
+// Los adoptantes solo consultan el historial. El veterinario (o un administrador)
+// además puede registrar nuevos antecedentes y actualizar los existentes
+function HistorialPage({ cuenta }) {
+  const esVeterinario = puedeEditarHistorial(cuenta);
+
   const [animales, setAnimales] = useState([]);
   const [seleccionado, setSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [error, setError] = useState("");
+  // null: formulario cerrado, "nuevo": agregando, número: id del registro que se edita
+  const [editando, setEditando] = useState(null);
+  const [mensaje, setMensaje] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registroClinicoFormSchema),
+    defaultValues: formularioVacio(cuenta),
+  });
 
   useEffect(() => {
     const cargarAnimales = async () => {
       try {
         const lista = await animalesApi.listar();
-        setAnimales(lista.filter((animal) => animal.estado !== "ADOPTADO"));
+        // El veterinario también necesita ver a los animales ya adoptados
+        setAnimales(esVeterinario ? lista : lista.filter((animal) => animal.estado !== "ADOPTADO"));
         setError("");
       } catch (err) {
         setError(`No se pudieron cargar los animales: ${err.message}`);
@@ -38,17 +108,66 @@ function HistorialPage() {
     };
 
     cargarAnimales();
-  }, []);
+  }, [esVeterinario]);
 
-  const handleVerHistorial = async (animal) => {
+  const cargarHistorial = async (animalId) => {
     try {
       setCargandoHistorial(true);
       setError("");
-      setSeleccionado(await animalesApi.historial(animal.id));
+      setSeleccionado(await animalesApi.historial(animalId));
     } catch (err) {
       setError(`No se pudo cargar el historial clínico: ${err.message}`);
     } finally {
       setCargandoHistorial(false);
+    }
+  };
+
+  const cerrarFormulario = () => {
+    setEditando(null);
+    reset(formularioVacio(cuenta));
+  };
+
+  const handleVerHistorial = (animal) => {
+    cerrarFormulario();
+    setMensaje("");
+    cargarHistorial(animal.id);
+  };
+
+  const handleCerrarHistorial = () => {
+    cerrarFormulario();
+    setMensaje("");
+    setSeleccionado(null);
+  };
+
+  const handleAgregar = () => {
+    setMensaje("");
+    setError("");
+    reset(formularioVacio(cuenta));
+    setEditando("nuevo");
+  };
+
+  const handleEditar = (registro) => {
+    setMensaje("");
+    setError("");
+    reset(aFormulario(registro));
+    setEditando(registro.id);
+  };
+
+  const onSubmit = async (datos) => {
+    try {
+      setError("");
+      if (editando === "nuevo") {
+        await registrosClinicosApi.crear(seleccionado.id, datos);
+        setMensaje("Registro clínico agregado.");
+      } else {
+        await registrosClinicosApi.actualizar(seleccionado.id, editando, datos);
+        setMensaje("Registro clínico actualizado.");
+      }
+      cerrarFormulario();
+      // Se vuelve a pedir al backend para mostrar lo que quedó guardado
+      await cargarHistorial(seleccionado.id);
+    } catch (err) {
+      setError(`No se pudo guardar el registro clínico: ${err.message}`);
     }
   };
 
@@ -107,7 +226,7 @@ function HistorialPage() {
                     disabled={cargandoHistorial}
                     style={estiloBoton}
                   >
-                    Ver historial clínico
+                    {esVeterinario ? "Historial clínico" : "Ver historial clínico"}
                   </button>
                 </td>
               </tr>
@@ -122,8 +241,14 @@ function HistorialPage() {
             Historial clínico de {nombreAnimal(seleccionado)}
           </h3>
           <p>
-            <em>Información de solo lectura registrada por el equipo veterinario del refugio.</em>
+            <em>
+              {esVeterinario
+                ? "Puedes agregar nuevos registros o actualizar los existentes."
+                : "Información de solo lectura registrada por el equipo veterinario del refugio."}
+            </em>
           </p>
+
+          {mensaje && <p style={{ color: "#166534", fontWeight: "bold" }}>{mensaje}</p>}
 
           {seleccionado.registrosClinicos.length === 0 ? (
             <p style={{ fontWeight: "bold" }}>
@@ -140,11 +265,15 @@ function HistorialPage() {
                   <th>Tratamiento</th>
                   <th>Veterinario</th>
                   <th>Observaciones</th>
+                  {esVeterinario && <th>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
                 {seleccionado.registrosClinicos.map((registro) => (
-                  <tr key={registro.id}>
+                  <tr
+                    key={registro.id}
+                    style={editando === registro.id ? { backgroundColor: "#fde68a" } : undefined}
+                  >
                     <td>{formatearFecha(registro.fecha)}</td>
                     <td>{formatearEnum(registro.tipo)}</td>
                     <td>{registro.descripcion}</td>
@@ -152,14 +281,106 @@ function HistorialPage() {
                     <td>{registro.tratamiento || "—"}</td>
                     <td>{registro.veterinario || "—"}</td>
                     <td>{registro.observaciones || "—"}</td>
+                    {esVeterinario && (
+                      <td>
+                        <button type="button" onClick={() => handleEditar(registro)}>
+                          Editar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
 
+          {esVeterinario && editando === null && (
+            <>
+              <br />
+              <button type="button" onClick={handleAgregar} style={estiloBoton}>
+                Agregar registro
+              </button>
+            </>
+          )}
+
+          {esVeterinario && editando !== null && (
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
+              style={{
+                width: "100%",
+                maxWidth: "520px",
+                marginTop: "24px",
+                padding: "20px",
+                backgroundColor: "#ffffff",
+                borderRadius: "8px",
+                boxSizing: "border-box",
+              }}
+            >
+              <h4 style={{ marginTop: 0, fontSize: "1.3em" }}>
+                {editando === "nuevo" ? "Nuevo registro clínico" : "Actualizar registro clínico"}
+              </h4>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label htmlFor="fecha">Fecha</label>
+                <input
+                  id="fecha"
+                  type="date"
+                  max={hoyComoTexto()}
+                  style={estiloCampo}
+                  {...register("fecha")}
+                />
+                {errors.fecha && <p style={estiloError}>{errors.fecha.message}</p>}
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label htmlFor="tipo">Tipo de registro</label>
+                <select id="tipo" style={estiloCampo} {...register("tipo")}>
+                  <option value="">Seleccione un tipo</option>
+                  {TIPOS_REGISTRO_CLINICO.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {formatearEnum(tipo)}
+                    </option>
+                  ))}
+                </select>
+                {errors.tipo && <p style={estiloError}>{errors.tipo.message}</p>}
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label htmlFor="descripcion">Descripción</label>
+                <textarea id="descripcion" rows={3} style={estiloCampo} {...register("descripcion")} />
+                {errors.descripcion && <p style={estiloError}>{errors.descripcion.message}</p>}
+              </div>
+
+              {CAMPOS_TEXTO.map(({ nombre, etiqueta }) => (
+                <div key={nombre} style={{ marginBottom: "12px" }}>
+                  <label htmlFor={nombre}>{etiqueta} (opcional)</label>
+                  <textarea id={nombre} rows={2} style={estiloCampo} {...register(nombre)} />
+                  {errors[nombre] && <p style={estiloError}>{errors[nombre].message}</p>}
+                </div>
+              ))}
+
+              <div style={{ marginBottom: "16px" }}>
+                <label htmlFor="veterinario">Veterinario responsable (opcional)</label>
+                <input id="veterinario" type="text" style={estiloCampo} {...register("veterinario")} />
+                {errors.veterinario && <p style={estiloError}>{errors.veterinario.message}</p>}
+              </div>
+
+              <button type="submit" disabled={isSubmitting} style={estiloBoton}>
+                {isSubmitting
+                  ? "Guardando..."
+                  : editando === "nuevo"
+                    ? "Guardar registro"
+                    : "Guardar cambios"}
+              </button>{" "}
+              <button type="button" onClick={cerrarFormulario} disabled={isSubmitting}>
+                Cancelar
+              </button>
+            </form>
+          )}
+
           <br />
-          <button type="button" onClick={() => setSeleccionado(null)} style={estiloBoton}>
+          <button type="button" onClick={handleCerrarHistorial} style={estiloBoton}>
             Cerrar
           </button>
         </div>
