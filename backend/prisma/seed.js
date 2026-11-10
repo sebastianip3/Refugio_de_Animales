@@ -1,14 +1,28 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../src/config/prisma.js';
 
-// Cuenta para entrar como encargado de adopciones en desarrollo.
-// La contraseña se lee de ENCARGADO_CONTRASENA en backend/.env para no dejarla en el repositorio
-const encargado = {
-  nombre: 'Encargado',
-  apellido: 'Adopciones',
-  tipo: 'ENCARGADO_ADOPCIONES',
-  correo: 'encargado@refugio.cl',
-};
+// Cuentas del personal para entrar en desarrollo.
+// Cada contraseña se lee de backend/.env (variableContrasena) para no dejarla en el repositorio
+const cuentasPersonal = [
+  {
+    variableContrasena: 'ENCARGADO_CONTRASENA',
+    datos: {
+      nombre: 'Encargado',
+      apellido: 'Adopciones',
+      tipo: 'ENCARGADO_ADOPCIONES',
+      correo: 'encargado@refugio.cl',
+    },
+  },
+  {
+    variableContrasena: 'VETERINARIO_CONTRASENA',
+    datos: {
+      nombre: 'Veterinario',
+      apellido: 'Refugio',
+      tipo: 'VETERINARIO',
+      correo: 'veterinario@refugio.cl',
+    },
+  },
+];
 
 const especies = [
   { nombre: 'Perro', descripcion: 'Canis lupus familiaris' },
@@ -84,16 +98,18 @@ async function main() {
   console.log(`=> ${especies.length} especies cargadas`);
 
   // Si la cuenta ya existe no se modifica, para no pisar una contraseña cambiada
-  const contrasena = process.env.ENCARGADO_CONTRASENA;
-  if (contrasena) {
+  for (const { variableContrasena, datos } of cuentasPersonal) {
+    const contrasena = process.env[variableContrasena];
+    if (!contrasena) {
+      console.log(`=> cuenta ${datos.correo} omitida: falta ${variableContrasena} en backend/.env`);
+      continue;
+    }
     await prisma.cuenta.upsert({
-      where: { correo: encargado.correo },
+      where: { correo: datos.correo },
       update: {},
-      create: { ...encargado, contrasenaHash: await bcrypt.hash(contrasena, 10) },
+      create: { ...datos, contrasenaHash: await bcrypt.hash(contrasena, 10) },
     });
-    console.log(`=> cuenta de encargado de adopciones: ${encargado.correo}`);
-  } else {
-    console.log('=> cuenta de encargado omitida: falta ENCARGADO_CONTRASENA en backend/.env');
+    console.log(`=> cuenta de ${datos.tipo}: ${datos.correo}`);
   }
 
   // Solo se cargan una vez, para no duplicar animales al volver a ejecutar el seed
