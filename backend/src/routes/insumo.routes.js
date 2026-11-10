@@ -1,8 +1,7 @@
 
 import { Router } from "express";
 
-import { listarInsumos } from "../controllers/insumo.controller.js";
-
+import { listarInsumos, crearInsumo } from "../controllers/insumo.controller.js";
 import { autenticar } from "../middleware/auth.middleware.js";
 
 import { permitirCuenta } from "../middleware/rol.middleware.js";
@@ -21,6 +20,13 @@ router.get(
     "ENCARGADO_ADOPCIONES"
   ),
   listarInsumos
+);
+
+router.post(
+  "/",
+  autenticar,
+  permitirCuenta("ADMINISTRADOR"),
+  crearInsumo
 );
 
 export default router;
