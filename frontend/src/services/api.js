@@ -41,5 +41,13 @@ export const adopcionesApi = {
 };
 
 export const cuidadosApi = {
-  listarVoluntariosDisponibles: () => request("/cuidados/voluntarios-disponibles"),
+  listarAnimales: () => request("/cuidados/animales"),
+  consultarDisponibilidad: (animalId, fechaInicio, fechaFin) => {
+    const params = new URLSearchParams({
+      animalId: String(animalId),
+      fechaInicio: new Date(fechaInicio).toISOString(),
+      fechaFin: new Date(fechaFin).toISOString(),
+    });
+    return request(`/cuidados/disponibilidad?${params}`);
+  },
 };
