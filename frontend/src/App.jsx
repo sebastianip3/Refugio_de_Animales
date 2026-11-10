@@ -4,7 +4,8 @@ import InicioPage from "./pages/InicioPage.jsx";
 import AnimalesPage from "./pages/AnimalesPage.jsx";
 import AdopcionesPage from "./pages/AdopcionesPage.jsx";
 import HistorialPage from "./pages/HistorialPage.jsx";
-import CuidadosPage from "./pages/CuidadosPage.jsx";
+//import CuidadosPage from "./pages/CuidadosPage.jsx";
+import InscripcionEsterilizacionPage from "./pages/inscripcionEsterilizacion.jsx";
 import Layout from "./components/Layout.jsx";
 
 const PAGINAS = {
@@ -12,12 +13,16 @@ const PAGINAS = {
   animales: AnimalesPage,
   adopciones: AdopcionesPage,
   historial: HistorialPage,
-  cuidados: CuidadosPage,
+  //cuidados: CuidadosPage,
 };
 
 function App() {
   const [registrado, setRegistrado] = useState(false);
   const [pagina, setPagina] = useState("inicio");
+  
+  if (window.location.pathname === "/inscripcion-esterilizacion"){
+    return <InscripcionEsterilizacionPage />;
+  }
 
   if (!registrado) {
     return (
