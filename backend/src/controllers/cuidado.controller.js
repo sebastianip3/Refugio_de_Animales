@@ -35,6 +35,15 @@ export async function consultarDisponibilidad(req, res) {
   }
 }
 
+export async function listarAnimalesConCuidadorVigente(req, res) {
+  try {
+    const animales = await cuidadoService.listarAnimalesConCuidadorVigente();
+    return res.json(animales);
+  } catch (error) {
+    return manejarError(res, error);
+  }
+}
+
 export async function asignarCuidado(req, res) {
   try {
     const datos = crearCuidadoSchema.parse(req.body);
