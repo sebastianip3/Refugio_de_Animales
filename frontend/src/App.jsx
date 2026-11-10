@@ -7,6 +7,7 @@ import AdopcionesPage from "./pages/AdopcionesPage.jsx";
 import HistorialPage from "./pages/HistorialPage.jsx";
 import CuidadosPage from "./pages/CuidadosPage.jsx";
 import PerfilPage from "./pages/PerfilPage.jsx";
+import InscripcionEsterilizacionPage from "./pages/inscripcionEsterilizacion.jsx";
 import Layout from "./components/Layout.jsx";
 import { cuentasApi, EVENTO_SESION_CERRADA } from "./services/api.js";
 
@@ -54,6 +55,10 @@ function App() {
     window.addEventListener(EVENTO_SESION_CERRADA, volverAlInicio);
     return () => window.removeEventListener(EVENTO_SESION_CERRADA, volverAlInicio);
   }, []);
+
+  if (window.location.pathname === "/inscripcion-esterilizacion") {
+    return <InscripcionEsterilizacionPage />;
+  }
 
   if (cargandoSesion) return <p>Cargando...</p>;
 

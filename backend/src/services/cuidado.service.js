@@ -9,6 +9,36 @@ function filtroSolapamiento({ animalId, fechaInicio, fechaFin }) {
   };
 }
 
+export async function listarAnimalesConCuidadorVigente() {
+  const ahora = new Date();
+  const animales = await prisma.animal.findMany({
+    select: {
+      id: true,
+      nombre: true,
+      cuidados: {
+        where: {
+          fechaInicio: { lte: ahora },
+          fechaFin: { gt: ahora },
+          cuenta: { tipo: 'VOLUNTARIO' },
+        },
+        orderBy: { fechaInicio: 'desc' },
+        take: 1,
+        select: {
+          cuenta: {
+            select: { id: true, nombre: true, apellido: true },
+          },
+        },
+      },
+    },
+    orderBy: { id: 'asc' },
+  });
+
+  return animales.map(({ cuidados, ...animal }) => ({
+    ...animal,
+    cuidador: cuidados[0]?.cuenta ?? null,
+  }));
+}
+
 export async function consultarDisponibilidad({ animalId, fechaInicio, fechaFin }) {
   const animal = await prisma.animal.findUnique({
     where: { id: animalId },
