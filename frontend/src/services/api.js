@@ -59,6 +59,10 @@ export const cuentasApi = {
     request("/cuentas/login", { method: "POST", body: JSON.stringify(credenciales) }),
   logout: () => request("/cuentas/logout", { method: "POST" }),
   perfil: () => request("/cuentas/perfil"),
+  listarVoluntarios: () => request("/cuentas/voluntarios"),
+  crearVoluntario: (datos) =>
+    request("/cuentas/voluntarios", { method: "POST", body: JSON.stringify(datos) }),
+  eliminarVoluntario: (id) => request(`/cuentas/${id}`, { method: "DELETE" }),
 };
 
 export const adopcionesApi = {
