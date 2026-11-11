@@ -90,6 +90,8 @@ export const cuidadosApi = {
     });
     return request(`/cuidados/disponibilidad?${params}`);
   },
+  asignar: (cuidado) =>
+    request("/cuidados", { method: "POST", body: JSON.stringify(cuidado) }),
 };
 
 export const esterilizacionApi = {
@@ -147,4 +149,3 @@ export const insumosApi = {
     request("/insumos/alertas"),
 
 };
-

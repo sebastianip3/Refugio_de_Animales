@@ -50,11 +50,6 @@ function App() {
   // JavaScript no puede leer la cookie httpOnly, así que al cargar se pregunta
   // al backend si hay una sesión abierta (si no la hay, responde 401)
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      setCargandoSesion(false);
-      return;
-    }
-
     cuentasApi
       .perfil()
       .then(setCuenta)
@@ -73,19 +68,19 @@ function App() {
 
   if (cargandoSesion) return <p>Cargando...</p>;
 
-  if (!registrado && !cuenta && !import.meta.env.DEV) {
-    if (enLogin) {
-      return (
-        <LoginPage
-          onLogin={(cuentaIniciada) => {
-            setCuenta(cuentaIniciada);
-            setEnLogin(false);
-          }}
-          onVolver={() => setEnLogin(false)}
-        />
-      );
-    }
+  if (enLogin) {
+    return (
+      <LoginPage
+        onLogin={(cuentaIniciada) => {
+          setCuenta(cuentaIniciada);
+          setEnLogin(false);
+        }}
+        onVolver={() => setEnLogin(false)}
+      />
+    );
+  }
 
+  if (!registrado && !cuenta && !import.meta.env.DEV) {
     return (
       <RegistroPage
         onRegistro={() => setRegistrado(true)}
@@ -108,7 +103,11 @@ function App() {
       }}
     >
       {Pagina ? (
-        <Pagina cuenta={cuenta} onNavegar={setPagina} />
+        <Pagina
+          cuenta={cuenta}
+          onNavegar={setPagina}
+          onIniciarSesion={() => setEnLogin(true)}
+        />
       ) : (
         <p>Sección en construcción.</p>
       )}

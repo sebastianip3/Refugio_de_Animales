@@ -58,8 +58,8 @@ function obtenerColorVoluntario(cuentaId) {
   return PALETA_VOLUNTARIOS[Math.abs(Number(cuentaId)) % PALETA_VOLUNTARIOS.length];
 }
 
-function VoluntariadoPage({ cuenta }) {
-  const puedeAdministrar = cuenta?.tipo === "ADMINISTRADOR" || import.meta.env.DEV;
+function VoluntariadoPage({ cuenta, onIniciarSesion }) {
+  const puedeAdministrar = cuenta?.tipo === "ADMINISTRADOR";
   const esVoluntarioAutenticado = cuenta?.tipo === "VOLUNTARIO";
 
   const [voluntarios, setVoluntarios] = useState([]);
@@ -138,7 +138,7 @@ function VoluntariadoPage({ cuenta }) {
   );
 
   useEffect(() => {
-    if (cuenta || import.meta.env.DEV) {
+    if (cuenta) {
       cargarTodo();
     }
   }, [cuenta, cargarTodo]);
@@ -279,10 +279,19 @@ function VoluntariadoPage({ cuenta }) {
     });
   }, [voluntarios, disponibilidades, turnos]);
 
-  if (!cuenta && !import.meta.env.DEV) {
+  if (!cuenta) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 px-4 py-10 sm:px-8">
-        <p className="mx-auto max-w-6xl text-slate-600">Inicia sesión para consultar los voluntarios.</p>
+        <div className="mx-auto max-w-6xl text-center">
+          <p className="text-slate-600">Inicia sesión para consultar los voluntarios.</p>
+          <button
+            type="button"
+            onClick={onIniciarSesion}
+            className="mt-4 rounded-xl bg-sky-600 px-5 py-3 font-semibold text-white hover:bg-sky-700"
+          >
+            Iniciar sesión
+          </button>
+        </div>
       </main>
     );
   }
