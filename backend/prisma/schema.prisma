@@ -202,7 +202,7 @@ model JornadaEsterilizacion {
   fecha        DateTime
   lugar        String   @db.VarChar(255)
   comuna       String   @db.VarChar(100)
-  sector       String?  @db.VarChar(100)
+  sector       String  @db.VarChar(100)
   cuposTotales Int
   activa       Boolean  @default(false)
 

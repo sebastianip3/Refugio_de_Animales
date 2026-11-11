@@ -29,7 +29,7 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
         register,
         handleSubmit,
         formState: {errors, isSubmitting},
-    } = useForm({ resolver: zodResolver(inscripcionFormSchema)});
+    } = useForm({ resolver: zodResolver(inscripcionFormSchema), mode: "onTouched"});
 
     const onSubmit =  async (datos) => {
         setErrorServidor("");
@@ -91,7 +91,8 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
                 </Campo>
 
                 <Campo id="pesoEstimado" etiqueta="Peso Estimado (kg)" error={errors.pesoEstimado}>
-                    <input id="pesoEstimado" type="number" step="0.1" {...register("pesoEstimado")} className={estiloInput} />
+                    <input id="pesoEstimado" type="number" step="0.1" min="0.1" max="150"  
+                     onKeyDown={(e) => ["-", "+", "e", "E"].includes(e.key) && e.preventDefault()} {...register("pesoEstimado")} className={estiloInput} />
                 </Campo>
             </fieldset>
 

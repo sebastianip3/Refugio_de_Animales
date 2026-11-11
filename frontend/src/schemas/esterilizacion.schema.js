@@ -38,3 +38,17 @@ const rutSchema = z
     tutorComuna: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
     tutorSector: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
   });
+
+  export const jornadaFormSchema = z.object({
+    nombre: z.string().trim().min(3, "Minimo 3 caracteres").max(150, "Maximo 150 caracteres"),
+    fecha: z
+    .string()
+    .min(1, "Debe ingresar fecha")
+    .refine((valor) => new Date(valor) > new Date(), "La fecha debe ser futura")
+    .transform((valor) => new Date(valor).toISOString()),
+    lugar: z.string().trim().min(3, "Minimo 3 caracteres").max(255, "Maximo 255 caracteres"),
+    comuna: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
+    sector: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
+    cuposTotales: z.coerce.number({ error: "Ingrese número"}).int("Debe numero entero").min(1, "Debe haber al menos 1 cupos"),
+    indicacionesPostOperatorias: z.string().trim().min(1, "Debe escribir las indicaciones"),
+  });

@@ -13,7 +13,7 @@ export const jornadaSchema = z.object({
   fecha: z.coerce.date(),
   lugar: z.string().trim().min(3).max(255),
   comuna: z.string().trim().min(2).max(100),
-  sector: z.string().trim().max(100).nullish(),
+  sector: z.string().trim().min(2).max(100),
   cuposTotales: z.number().int().min(1),
   indicacionesPostOperatorias: z.string().trim().min(1),
 });
