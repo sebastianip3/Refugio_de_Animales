@@ -5,6 +5,7 @@ import * as cuentaService from '../services/cuenta.service.js';
 import {
   cambiarDisponibilidadCuidadoSchema,
   cambiarCorreoCuentaSchema,
+  idVoluntarioSchema,
   loginCuentaSchema,
 } from '../schema/cuenta.schema.js';
 import { AppError } from '../utils/app-error.js';
@@ -83,6 +84,21 @@ export async function cambiarDisponibilidadCuidado(req, res) {
     );
     return res.json(cuenta);
   } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function eliminarVoluntario(req, res) {
+  try {
+    const { id } = idVoluntarioSchema.parse(req.params);
+    await cuentaService.eliminarVoluntario(id);
+    return res.status(204).end();
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return res.status(409).json({
+        message: 'No se puede eliminar el voluntario porque tiene registros de cuidado; desactiva su disponibilidad',
+      });
+    }
     return manejarErrorCuenta(res, error);
   }
 }

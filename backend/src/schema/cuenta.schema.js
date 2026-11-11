@@ -16,3 +16,7 @@ export const cambiarCorreoCuentaSchema = z.object({
 export const cambiarDisponibilidadCuidadoSchema = z.object({
   disponibleCuidado: z.boolean(),
 });
+
+export const idVoluntarioSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});

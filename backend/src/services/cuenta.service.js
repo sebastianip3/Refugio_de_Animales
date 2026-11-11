@@ -38,3 +38,23 @@ export async function cambiarDisponibilidadCuidado(id, disponibleCuidado) {
     },
   });
 }
+
+export async function eliminarVoluntario(id) {
+  const cuenta = await prisma.cuenta.findUnique({
+    where: { id },
+    select: { id: true, tipo: true },
+  });
+  if (!cuenta || cuenta.tipo !== 'VOLUNTARIO') {
+    throw new AppError(404, 'Voluntario no encontrado');
+  }
+
+  const cantidadCuidados = await prisma.cuidadoAnimal.count({ where: { cuentaId: id } });
+  if (cantidadCuidados > 0) {
+    throw new AppError(
+      409,
+      'No se puede eliminar el voluntario porque tiene registros de cuidado; desactiva su disponibilidad',
+    );
+  }
+
+  return prisma.cuenta.delete({ where: { id } });
+}
