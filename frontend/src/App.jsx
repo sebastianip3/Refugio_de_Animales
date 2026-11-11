@@ -6,6 +6,7 @@ import AnimalesPage from "./pages/AnimalesPage.jsx";
 import AdopcionesPage from "./pages/AdopcionesPage.jsx";
 import HistorialPage from "./pages/HistorialPage.jsx";
 import CuidadosPage from "./pages/CuidadosPage.jsx";
+import InsumosPage from "./pages/InsumosPage.jsx";
 import PerfilPage from "./pages/PerfilPage.jsx";
 import InscripcionEsterilizacionPage from "./pages/inscripcionEsterilizacionPage.jsx";
 import VoluntariadoPage from "./pages/VoluntariadoPage.jsx";
@@ -19,6 +20,7 @@ const PAGINAS = {
   adopciones: AdopcionesPage,
   historial: HistorialPage,
   cuidados: CuidadosPage,
+  insumos: InsumosPage,
   voluntariado: VoluntariadoPage,
   perfil: PerfilPage,
   esterilizacion: EsterilizacionPage,

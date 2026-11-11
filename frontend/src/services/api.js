@@ -115,3 +115,30 @@ obtenerInscripcion: (inscripcionId) =>
 reenviarComprobante: (id) =>
   request(`/esterilizacion/inscripciones/${id}/reenviar-comprobante`, {method: "POST"}),
 };
+
+
+
+export const insumosApi = {
+  listar: () => request("/insumos"),
+
+  crear: (insumo) =>
+    request("/insumos", {
+      method: "POST",
+      body: JSON.stringify(insumo),
+    }),
+
+  registrarMovimiento: (id, movimiento) =>
+    request(`/insumos/${id}/movimientos`, {
+      method: "POST",
+      body: JSON.stringify(movimiento),
+    }),
+
+  listarMovimientos: (id) => 
+    request(`/insumos/${id}/movimientos`),
+
+
+  listarAlertas: () => 
+    request("/insumos/alertas"),
+
+};
+
