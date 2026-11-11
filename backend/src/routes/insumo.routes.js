@@ -1,7 +1,11 @@
 
 import { Router } from "express";
 
-import { listarInsumos, crearInsumo } from "../controllers/insumo.controller.js";
+import {
+  listarInsumos,
+  crearInsumo,
+  registrarMovimientoInsumo,
+} from "../controllers/insumo.controller.js";
 import { autenticar } from "../middleware/auth.middleware.js";
 
 import { permitirCuenta } from "../middleware/rol.middleware.js";
@@ -27,6 +31,13 @@ router.post(
   autenticar,
   permitirCuenta("ADMINISTRADOR"),
   crearInsumo
+);
+
+router.post(
+  "/:id/movimientos",
+  autenticar,
+  permitirCuenta("ADMINISTRADOR"),
+  registrarMovimientoInsumo
 );
 
 export default router;
