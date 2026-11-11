@@ -423,7 +423,7 @@ function PanelJornadas() {
 
 // la administradora gestiona las jornadas
 function EsterilizacionPage({ cuenta }) {
- /* if (cuenta?.tipo !== "ADMINISTRADOR") {
+  if (cuenta?.tipo !== "ADMINISTRADOR") {
     return (
       <div className="p-6">
         <h1 className="text-3xl font-bold text-slate-800">Jornadas de esterilización</h1>
@@ -432,7 +432,7 @@ function EsterilizacionPage({ cuenta }) {
         </p>
       </div>
     );
-  }*/
+  }
 
   return <PanelJornadas />;
 }
