@@ -73,6 +73,18 @@ const estiloCampo = {
   marginTop: "5px"
 };
 
+const estiloCeldaTabla = {
+  border: "1px solid #7b8b70",
+  padding: "10px 12px",
+  textAlign: "left",
+};
+
+const estiloCabeceraTabla = {
+  ...estiloCeldaTabla,
+  backgroundColor: "#435f0f",
+  color: "#ffffff",
+};
+
 function AnimalesPage() {
   const [animales, setAnimales] = useState([]);
   const [especies, setEspecies] = useState([]);
@@ -386,43 +398,55 @@ function AnimalesPage() {
         style={{ color: "crimson", fontWeight: "bold", fontSize: "1.5em" }}
       >No hay animales registrados.</p>
       ) : (
-        <table border="1" cellPadding="6">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Especie</th>
-              <th>Sexo</th>
-              <th>Edad (meses)</th>
-              <th>Peso (kg)</th>
-              <th>Estado</th>
-              <th>Ingreso</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {animales.map((animal) => (
-              <tr key={animal.id}>
-                <td>{animal.id}</td>
-                <td>{animal.nombre || "—"}</td>
-                <td>{animal.especie?.nombre}</td>
-                <td>{formatearEnum(animal.sexo)}</td>
-                <td>{animal.edadEstimada ?? "—"}</td>
-                <td>{animal.peso ?? "—"}</td>
-                <td>{formatearEnum(animal.estado)}</td>
-                <td>{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>
-                <td>
-                  <button type="button" onClick={() => handleEditar(animal)}>
-                    Editar
-                  </button>{" "}
-                  <button type="button" onClick={() => handleEliminar(animal)}>
-                    Eliminar
-                  </button>
-                </td>
+        <div style={{ width: "100%", maxWidth: "1100px", overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              border: "2px solid #435f0f",
+              backgroundColor: "#ffffff",
+              color: "#030507",
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={estiloCabeceraTabla}>ID</th>
+                <th style={estiloCabeceraTabla}>Nombre</th>
+                <th style={estiloCabeceraTabla}>Especie</th>
+                <th style={estiloCabeceraTabla}>Sexo</th>
+                <th style={estiloCabeceraTabla}>Edad (meses)</th>
+                <th style={estiloCabeceraTabla}>Peso (kg)</th>
+                <th style={estiloCabeceraTabla}>Estado</th>
+                <th style={estiloCabeceraTabla}>Ingreso</th>
+                <th style={estiloCabeceraTabla}>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {animales.map((animal) => (
+                <tr key={animal.id}>
+                  <td style={estiloCeldaTabla}>{animal.id}</td>
+                  <td style={estiloCeldaTabla}>{animal.nombre || "—"}</td>
+                  <td style={estiloCeldaTabla}>{animal.especie?.nombre}</td>
+                  <td style={estiloCeldaTabla}>{formatearEnum(animal.sexo)}</td>
+                  <td style={estiloCeldaTabla}>{animal.edadEstimada ?? "—"}</td>
+                  <td style={estiloCeldaTabla}>{animal.peso ?? "—"}</td>
+                  <td style={estiloCeldaTabla}>{formatearEnum(animal.estado)}</td>
+                  <td style={estiloCeldaTabla}>
+                    {new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}
+                  </td>
+                  <td style={estiloCeldaTabla}>
+                    <button type="button" onClick={() => handleEditar(animal)}>
+                      Editar
+                    </button>{" "}
+                    <button type="button" onClick={() => handleEliminar(animal)}>
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

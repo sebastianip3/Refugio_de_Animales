@@ -1,6 +1,18 @@
 import { Fragment, useEffect, useState } from "react";
 import { cuidadosApi } from "../services/api.js";
 
+const estiloCeldaTabla = {
+  border: "1px solid #7b8b70",
+  padding: "10px 12px",
+  textAlign: "left",
+};
+
+const estiloCabeceraTabla = {
+  ...estiloCeldaTabla,
+  backgroundColor: "#b63c0c",
+  color: "#ffffff",
+};
+
 function horarioInicial(horasAdelante) {
   const fecha = new Date();
   fecha.setMinutes(0, 0, 0);
@@ -73,7 +85,17 @@ function CuidadosPage() {
   };
 
   return (
-    <main>
+    <main
+    style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        boxSizing: "border-box",
+        backgroundColor: '#f57657'
+      }}>
       <h1>Cuidados</h1>
 
       {error && <p role="alert">{error}</p>}
@@ -83,96 +105,107 @@ function CuidadosPage() {
       ) : animales.length === 0 ? (
         <p>No hay animales registrados.</p>
       ) : (
-        <table border="1" cellPadding="6">
-          <thead>
-            <tr>
-              <th>ID del animal</th>
-              <th>Nombre del animal</th>
-              <th>Ayudante encargado</th>
-              <th>ID del ayudante</th>
-            </tr>
-          </thead>
-          <tbody>
-            {animales.map((animal) => (
-              <Fragment key={animal.id}>
+        <div style={{ width: "100%", maxWidth: "1100px", overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              border: "2px solid #5e1b07",
+              backgroundColor: "#ffffff",
+              color: "#030507",
+            }}
+          >
+            <thead>
               <tr>
-                <td>{animal.id}</td>
-                <td>{animal.nombre || "Sin nombre"}</td>
-                <td>{animal.cuidador
-                  ? `${animal.cuidador.nombre} ${animal.cuidador.apellido}`
-                  : animalAbiertoId === animal.id
-                    ? (
-                      <button type="button" onClick={() => alternarAsignacion(animal.id)}>
-                        Cerrar
-                      </button>
-                    )
-                    : (
-                      <button type="button" onClick={() => alternarAsignacion(animal.id)}>
-                        Asignar
-                      </button>
-                    )}
-                </td>
-                <td>{animal.cuidador?.id ?? "—"}</td>
+                <th style={estiloCabeceraTabla}>ID del animal</th>
+                <th style={estiloCabeceraTabla}>Nombre del animal</th>
+                <th style={estiloCabeceraTabla}>Ayudante encargado</th>
+                <th style={estiloCabeceraTabla}>ID del ayudante</th>
               </tr>
-              {animalAbiertoId === animal.id && !animal.cuidador && (
-                <tr>
-                  <td colSpan="4">
-                    <fieldset>
-                      <legend>Seleccionar voluntario y horario</legend>
-                      <label>
-                        Desde{" "}
-                        <input
-                          type="datetime-local"
-                          value={fechaInicio}
-                          onChange={(event) => setFechaInicio(event.target.value)}
-                        />
-                      </label>{" "}
-                      <label>
-                        Hasta{" "}
-                        <input
-                          type="datetime-local"
-                          value={fechaFin}
-                          onChange={(event) => setFechaFin(event.target.value)}
-                        />
-                      </label>
+            </thead>
+            <tbody>
+              {animales.map((animal) => (
+                <Fragment key={animal.id}>
+                  <tr>
+                    <td style={estiloCeldaTabla}>{animal.id}</td>
+                    <td style={estiloCeldaTabla}>{animal.nombre || "Sin nombre"}</td>
+                    <td style={estiloCeldaTabla}>
+                      {animal.cuidador
+                        ? `${animal.cuidador.nombre} ${animal.cuidador.apellido}`
+                        : animalAbiertoId === animal.id
+                          ? (
+                            <button type="button" onClick={() => alternarAsignacion(animal.id)}>
+                              Cerrar
+                            </button>
+                          )
+                          : (
+                            <button type="button" onClick={() => alternarAsignacion(animal.id)}>
+                              Asignar
+                            </button>
+                          )}
+                    </td>
+                    <td style={estiloCeldaTabla}>{animal.cuidador?.id ?? "—"}</td>
+                  </tr>
+                  {animalAbiertoId === animal.id && !animal.cuidador && (
+                    <tr>
+                      <td colSpan="4" style={estiloCeldaTabla}>
+                        <fieldset>
+                          <legend>Seleccionar voluntario y horario</legend>
+                          <label>
+                            Desde{" "}
+                            <input
+                              type="datetime-local"
+                              value={fechaInicio}
+                              onChange={(event) => setFechaInicio(event.target.value)}
+                            />
+                          </label>{" "}
+                          <label>
+                            Hasta{" "}
+                            <input
+                              type="datetime-local"
+                              value={fechaFin}
+                              onChange={(event) => setFechaFin(event.target.value)}
+                            />
+                          </label>
 
-                      {errorDisponibilidad && <p role="alert">{errorDisponibilidad}</p>}
-                      {consultando ? (
-                        <p role="status">Buscando voluntarios disponibles...</p>
-                      ) : asignacionesAnimal.length > 0 ? (
-                        <p>Este animal ya tiene un cuidado asignado en ese horario.</p>
-                      ) : (
-                        <label>
-                          Voluntario{" "}
-                          <select
-                            value={personaSeleccionadaId}
-                            onChange={(event) => setPersonaSeleccionadaId(event.target.value)}
-                            disabled={personasDisponibles.length === 0}
-                          >
-                            <option value="">Selecciona un voluntario</option>
-                            {personasDisponibles.map((persona) => (
-                              <option key={persona.id} value={persona.id}>
-                                {persona.nombre} {persona.apellido} (ID: {persona.id})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-                      {!consultando
-                        && !errorDisponibilidad
-                        && asignacionesAnimal.length === 0
-                        && personasDisponibles.length === 0 && (
-                          <p>No hay voluntarios disponibles para ese horario.</p>
-                      )}
-                      <p>La asignación todavía no se guarda desde esta página.</p>
-                    </fieldset>
-                  </td>
-                </tr>
-              )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
+                          {errorDisponibilidad && <p role="alert">{errorDisponibilidad}</p>}
+                          {consultando ? (
+                            <p role="status">Buscando voluntarios disponibles...</p>
+                          ) : asignacionesAnimal.length > 0 ? (
+                            <p>Este animal ya tiene un cuidado asignado en ese horario.</p>
+                          ) : (
+                            <label>
+                              Voluntario{" "}
+                              <select
+                                value={personaSeleccionadaId}
+                                onChange={(event) => setPersonaSeleccionadaId(event.target.value)}
+                                disabled={personasDisponibles.length === 0}
+                              >
+                                <option value="">Selecciona un voluntario</option>
+                                {personasDisponibles.map((persona) => (
+                                  <option key={persona.id} value={persona.id}>
+                                    {persona.nombre} {persona.apellido} (ID: {persona.id})
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          {!consultando
+                            && !errorDisponibilidad
+                            && asignacionesAnimal.length === 0
+                            && personasDisponibles.length === 0 && (
+                              <p>No hay voluntarios disponibles para ese horario.</p>
+                          )}
+                          <p>La asignación todavía no se guarda desde esta página.</p>
+                        </fieldset>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
