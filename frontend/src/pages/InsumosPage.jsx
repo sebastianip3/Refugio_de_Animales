@@ -77,6 +77,11 @@ function InsumosPage({ cuenta }) {
   // ============================
 
   const [insumos, setInsumos] = useState([]);
+
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("TODAS");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [mensajeExito, setMensajeExito] = useState("");
@@ -403,6 +408,35 @@ function InsumosPage({ cuenta }) {
     return "error";
   };
 
+
+  // Aplicar búsqueda y filtros al inventario
+  const insumosFiltrados = insumos.filter((insumo) => {
+    const texto = busqueda.trim().toLowerCase();
+
+    const coincideBusqueda =
+      insumo.nombre.toLowerCase().includes(texto) ||
+      (insumo.descripcion || "").toLowerCase().includes(texto);
+
+    const coincideCategoria =
+      filtroCategoria === "TODAS" ||
+      insumo.categoria === filtroCategoria;
+
+    const stockBajo =
+      Number(insumo.stockActual) <= Number(insumo.stockMinimo);
+
+    const coincideEstado =
+      filtroEstado === "TODOS" ||
+      (filtroEstado === "BAJO" && stockBajo) ||
+      (filtroEstado === "NORMAL" && !stockBajo);
+
+    return (
+      coincideBusqueda &&
+      coincideCategoria &&
+      coincideEstado
+    );
+  });
+
+
   // ============================
   // INTERFAZ PRINCIPAL
   // ============================
@@ -557,6 +591,54 @@ function InsumosPage({ cuenta }) {
           </Button>
         </Box>
 
+
+        {/* BÚSQUEDA Y FILTROS */}
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            flexWrap: "wrap",
+            mb: 3,
+          }}
+        >
+          <TextField
+            label="Buscar insumo"
+            placeholder="Nombre o descripción"
+            size="small"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            sx={{ flex: 2, minWidth: 200 }}
+          />
+
+          <TextField
+            select
+            label="Categoría"
+            size="small"
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value)}
+            sx={{ flex: 1, minWidth: 150 }}
+          >
+            <MenuItem value="TODAS">Todas</MenuItem>
+            <MenuItem value="ALIMENTO">Alimentos</MenuItem>
+            <MenuItem value="MEDICAMENTO">Medicamentos</MenuItem>
+            <MenuItem value="OTRO">Otros</MenuItem>
+          </TextField>
+
+          <TextField
+            select
+            label="Estado"
+            size="small"
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            sx={{ flex: 1, minWidth: 150 }}
+          >
+            <MenuItem value="TODOS">Todos</MenuItem>
+            <MenuItem value="NORMAL">Disponible</MenuItem>
+            <MenuItem value="BAJO">Stock bajo</MenuItem>
+          </TextField>
+        </Box>
+
+
         {cargando ? (
           <Box sx={{ textAlign: "center", p: 4 }}>
             <CircularProgress />
@@ -579,17 +661,18 @@ function InsumosPage({ cuenta }) {
               </TableHead>
 
               <TableBody>
-                {insumos.length === 0 ? (
+                {insumosFiltrados.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={esAdministrador ? 6 : 5}
                       align="center"
                     >
-                      No hay insumos registrados.
-                    </TableCell>
+                      {insumos.length === 0
+                        ? "No hay insumos registrados."
+                        : "No se encontraron insumos con los filtros seleccionados."}                  </TableCell>
                   </TableRow>
                 ) : (
-                  insumos.map((insumo) => {
+                  insumosFiltrados.map((insumo) => {
                     const estado = obtenerEstado(insumo);
 
                     return (
@@ -987,7 +1070,7 @@ function InsumosPage({ cuenta }) {
                           <Chip
                             label={
                               tiposMovimiento[
-                                movimiento.tipo
+                              movimiento.tipo
                               ] || movimiento.tipo
                             }
                             color={colorMovimiento(
