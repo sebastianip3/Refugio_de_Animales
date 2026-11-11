@@ -6,7 +6,9 @@ import {
   crearInsumo,
   registrarMovimientoInsumo,
   listarMovimientosInsumo,
+  listarAlertasInsumos,
 } from "../controllers/insumo.controller.js";
+
 import { autenticar } from "../middleware/auth.middleware.js";
 
 import { permitirCuenta } from "../middleware/rol.middleware.js";
@@ -25,6 +27,13 @@ router.get(
     "ENCARGADO_ADOPCIONES"
   ),
   listarInsumos
+);
+
+router.get(
+  "/alertas",
+  autenticar,
+  permitirCuenta("ADMINISTRADOR"),
+  listarAlertasInsumos
 );
 
 router.post(
@@ -48,5 +57,6 @@ router.get(
   permitirCuenta("ADMINISTRADOR"),
   listarMovimientosInsumo
 );
+
 
 export default router;

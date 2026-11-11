@@ -127,3 +127,18 @@ export async function listarMovimientosInsumo(req, res) {
     });
   }
 }
+
+
+export async function listarAlertasInsumos(req, res) {
+  try {
+    const alertas = await insumoService.listarAlertasInsumos();
+
+    return res.status(200).json(alertas);
+  } catch (error) {
+    console.error("Error al consultar alertas:", error);
+
+    return res.status(500).json({
+      message: "Error al consultar las alertas de insumos",
+    });
+  }
+}

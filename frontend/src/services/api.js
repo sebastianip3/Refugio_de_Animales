@@ -131,5 +131,10 @@ export const insumosApi = {
 
   listarMovimientos: (id) => 
     request(`/insumos/${id}/movimientos`),
+
+
+  listarAlertas: () => 
+    request("/insumos/alertas"),
+
 };
 

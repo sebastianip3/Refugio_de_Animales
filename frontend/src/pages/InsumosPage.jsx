@@ -25,6 +25,7 @@ import {
 
 import { insumosApi } from "../services/api.js";
 
+// Valores iniciales para registrar un insumo
 const formularioInicial = {
   nombre: "",
   categoria: "ALIMENTO",
@@ -46,6 +47,7 @@ const nombresCategoria = {
   OTRO: "Otro",
 };
 
+// Validar cantidades con máximo dos decimales
 function cantidadValida(valor, permiteCero = true) {
   const texto = String(valor).trim();
   const numero = Number(texto);
@@ -58,6 +60,7 @@ function cantidadValida(valor, permiteCero = true) {
   );
 }
 
+// Formatear fecha para Chile
 function formatearFecha(fecha) {
   return new Date(fecha).toLocaleString("es-CL", {
     day: "2-digit",
@@ -69,46 +72,81 @@ function formatearFecha(fecha) {
 }
 
 function InsumosPage({ cuenta }) {
-  // Inventario
+  // ============================
+  // ESTADOS DEL INVENTARIO
+  // ============================
+
   const [insumos, setInsumos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [mensajeExito, setMensajeExito] = useState("");
 
-  // Formulario de insumos
+  // ============================
+  // ESTADOS DE REGISTRO
+  // ============================
+
   const [formularioAbierto, setFormularioAbierto] =
     useState(false);
+
   const [nuevoInsumo, setNuevoInsumo] = useState({
     ...formularioInicial,
   });
+
   const [guardando, setGuardando] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState("");
 
-  // Formulario de movimientos
+  // ============================
+  // ESTADOS DE MOVIMIENTOS
+  // ============================
+
   const [movimientoAbierto, setMovimientoAbierto] =
     useState(false);
+
   const [insumoSeleccionado, setInsumoSeleccionado] =
     useState(null);
+
   const [tipoMovimiento, setTipoMovimiento] =
     useState("INGRESO");
+
   const [cantidadMovimiento, setCantidadMovimiento] =
     useState("1");
+
   const [observacion, setObservacion] = useState("");
   const [guardandoMovimiento, setGuardandoMovimiento] =
     useState(false);
+
   const [errorMovimiento, setErrorMovimiento] = useState("");
 
-  // Historial
+  // ============================
+  // ESTADOS DEL HISTORIAL
+  // ============================
+
   const [historialAbierto, setHistorialAbierto] =
     useState(false);
+
   const [historial, setHistorial] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] =
     useState(false);
+
   const [errorHistorial, setErrorHistorial] = useState("");
 
+  // ============================
+  // ESTADOS DE ALERTAS - RF2
+  // ============================
+
+  const [alertas, setAlertas] = useState([]);
+  const [cargandoAlertas, setCargandoAlertas] =
+    useState(true);
+
+  const [errorAlertas, setErrorAlertas] = useState("");
+
+  // Comprobar permisos del usuario
   const esAdministrador = cuenta?.tipo === "ADMINISTRADOR";
 
-  // Consultar inventario
+  // ============================
+  // CONSULTAR INVENTARIO
+  // ============================
+
   const cargarInsumos = useCallback(async () => {
     try {
       setCargando(true);
@@ -117,7 +155,9 @@ function InsumosPage({ cuenta }) {
       const datos = await insumosApi.listar();
       setInsumos(datos);
     } catch (err) {
-      setError(err.message || "Error al consultar inventario.");
+      setError(
+        err.message || "No se pudo consultar el inventario."
+      );
     } finally {
       setCargando(false);
     }
@@ -127,19 +167,80 @@ function InsumosPage({ cuenta }) {
     cargarInsumos();
   }, [cargarInsumos]);
 
-  // Estado de existencias
+  // ============================
+  // CONSULTAR ALERTAS - RF2
+  // ============================
+
+  const cargarAlertas = useCallback(async () => {
+    if (!esAdministrador) return;
+
+    try {
+      setErrorAlertas("");
+
+      const datos = await insumosApi.listarAlertas();
+      setAlertas(datos);
+    } catch (err) {
+      setErrorAlertas(
+        err.message || "No se pudieron cargar las alertas."
+      );
+    } finally {
+      setCargandoAlertas(false);
+    }
+  }, [esAdministrador]);
+
+  // Cargar alertas al entrar y cada 30 segundos
+  useEffect(() => {
+    if (!esAdministrador) {
+      setAlertas([]);
+      setCargandoAlertas(false);
+      return;
+    }
+
+    cargarAlertas();
+
+    const intervalo = setInterval(() => {
+      cargarAlertas();
+    }, 30000);
+
+    return () => clearInterval(intervalo);
+  }, [esAdministrador, cargarAlertas]);
+
+  // Actualizar inventario y alertas
+  const actualizarTodo = async () => {
+    const consultas = [cargarInsumos()];
+
+    if (esAdministrador) {
+      consultas.push(cargarAlertas());
+    }
+
+    await Promise.all(consultas);
+  };
+
+  // ============================
+  // ESTADO DEL STOCK
+  // ============================
+
   const obtenerEstado = (insumo) => {
     const actual = Number(insumo.stockActual);
     const minimo = Number(insumo.stockMinimo);
 
     if (actual <= minimo) {
-      return { texto: "Stock bajo", color: "error" };
+      return {
+        texto: "Stock bajo",
+        color: "error",
+      };
     }
 
-    return { texto: "Disponible", color: "success" };
+    return {
+      texto: "Disponible",
+      color: "success",
+    };
   };
 
-  // Crear insumos
+  // ============================
+  // REGISTRAR INSUMOS - RF1
+  // ============================
+
   const abrirFormulario = () => {
     if (!esAdministrador) return;
 
@@ -165,7 +266,7 @@ function InsumosPage({ cuenta }) {
       !cantidadValida(nuevoInsumo.stockMinimo)
     ) {
       setErrorFormulario(
-        "Completa los campos con cantidades válidas de hasta dos decimales."
+        "Completa los campos obligatorios con cantidades válidas de hasta dos decimales."
       );
       return;
     }
@@ -185,17 +286,24 @@ function InsumosPage({ cuenta }) {
 
       setFormularioAbierto(false);
       setNuevoInsumo({ ...formularioInicial });
+
       setMensajeExito("Insumo registrado correctamente.");
 
-      await cargarInsumos();
+      // Actualizar inventario y alertas
+      await actualizarTodo();
     } catch (err) {
-      setErrorFormulario(err.message);
+      setErrorFormulario(
+        err.message || "No se pudo registrar el insumo."
+      );
     } finally {
       setGuardando(false);
     }
   };
 
-  // Registrar ingresos, retiros y consumos
+  // ============================
+  // MOVIMIENTOS - RF1
+  // ============================
+
   const abrirMovimiento = (insumo, tipo) => {
     if (!esAdministrador) return;
 
@@ -218,7 +326,7 @@ function InsumosPage({ cuenta }) {
 
     if (!cantidadValida(cantidadMovimiento, false)) {
       setErrorMovimiento(
-        "Ingresa una cantidad mayor que cero, con hasta dos decimales."
+        "La cantidad debe ser mayor que cero y tener hasta dos decimales."
       );
       return;
     }
@@ -230,7 +338,7 @@ function InsumosPage({ cuenta }) {
       cantidad > Number(insumoSeleccionado.stockActual)
     ) {
       setErrorMovimiento(
-        "No hay stock suficiente para realizar la operación."
+        "No hay stock suficiente para esta operación."
       );
       return;
     }
@@ -252,15 +360,22 @@ function InsumosPage({ cuenta }) {
       setInsumoSeleccionado(null);
 
       setMensajeExito("Movimiento registrado correctamente.");
-      await cargarInsumos();
+
+      // Actualizar stock y alertas inmediatamente
+      await actualizarTodo();
     } catch (err) {
-      setErrorMovimiento(err.message);
+      setErrorMovimiento(
+        err.message || "No se pudo registrar el movimiento."
+      );
     } finally {
       setGuardandoMovimiento(false);
     }
   };
 
+  // ============================
   // HISTORIAL DE MOVIMIENTOS
+  // ============================
+
   const abrirHistorial = async (insumo) => {
     if (!esAdministrador) return;
 
@@ -288,6 +403,10 @@ function InsumosPage({ cuenta }) {
     return "error";
   };
 
+  // ============================
+  // INTERFAZ PRINCIPAL
+  // ============================
+
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       {/* ENCABEZADO */}
@@ -300,16 +419,20 @@ function InsumosPage({ cuenta }) {
         del refugio.
       </Typography>
 
+      {/* ROL Y BOTÓN DE REGISTRO */}
       <Box
         sx={{
           mb: 3,
           display: "flex",
           gap: 2,
           flexWrap: "wrap",
+          alignItems: "center",
         }}
       >
         <Chip
-          label={esAdministrador ? "Administrador" : "Solo consulta"}
+          label={
+            esAdministrador ? "Administrador" : "Solo consulta"
+          }
           color={esAdministrador ? "primary" : "default"}
         />
 
@@ -320,7 +443,7 @@ function InsumosPage({ cuenta }) {
         )}
       </Box>
 
-      {/* MENSAJES */}
+      {/* MENSAJES DEL SISTEMA */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -330,14 +453,86 @@ function InsumosPage({ cuenta }) {
       {mensajeExito && (
         <Alert
           severity="success"
-          onClose={() => setMensajeExito("")}
           sx={{ mb: 2 }}
+          onClose={() => setMensajeExito("")}
         >
           {mensajeExito}
         </Alert>
       )}
 
+      {/* ============================ */}
+      {/* PANEL DE ALERTAS - RF2 */}
+      {/* ============================ */}
+
+      {esAdministrador && (
+        <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 2,
+              mb: 2,
+              flexWrap: "wrap",
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold">
+              🔔 Alertas de inventario
+            </Typography>
+
+            <Chip
+              label={`${alertas.length} alertas`}
+              color={
+                alertas.length > 0 ? "warning" : "success"
+              }
+            />
+          </Box>
+
+          {errorAlertas ? (
+            <Alert severity="error">
+              {errorAlertas}
+            </Alert>
+          ) : cargandoAlertas ? (
+            <CircularProgress size={24} />
+          ) : alertas.length === 0 ? (
+            <Alert severity="success">
+              No hay alertas activas. Los alimentos y medicamentos
+              tienen existencias superiores a sus niveles mínimos.
+            </Alert>
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              {alertas.map((alerta) => (
+                <Alert key={alerta.id} severity="warning">
+                  <Typography fontWeight="bold">
+                    Stock bajo: {alerta.nombre}
+                  </Typography>
+
+                  <Typography variant="body2">
+                    Cantidad disponible: {alerta.stockActual}{" "}
+                    {alerta.unidadMedida}
+                  </Typography>
+
+                  <Typography variant="body2">
+                    Stock mínimo: {alerta.stockMinimo}{" "}
+                    {alerta.unidadMedida}
+                  </Typography>
+                </Alert>
+              ))}
+            </Box>
+          )}
+        </Paper>
+      )}
+
+      {/* ============================ */}
       {/* TABLA DE INVENTARIO */}
+      {/* ============================ */}
+
       <Paper sx={{ p: 3, borderRadius: 3 }}>
         <Box
           sx={{
@@ -346,6 +541,7 @@ function InsumosPage({ cuenta }) {
             alignItems: "center",
             gap: 2,
             mb: 2,
+            flexWrap: "wrap",
           }}
         >
           <Typography variant="h6" fontWeight="bold">
@@ -354,7 +550,7 @@ function InsumosPage({ cuenta }) {
 
           <Button
             variant="outlined"
-            onClick={cargarInsumos}
+            onClick={actualizarTodo}
             disabled={cargando}
           >
             Actualizar
@@ -375,6 +571,7 @@ function InsumosPage({ cuenta }) {
                   <TableCell>Cantidad</TableCell>
                   <TableCell>Unidad</TableCell>
                   <TableCell>Estado</TableCell>
+
                   {esAdministrador && (
                     <TableCell>Acciones</TableCell>
                   )}
@@ -398,11 +595,18 @@ function InsumosPage({ cuenta }) {
                     return (
                       <TableRow key={insumo.id}>
                         <TableCell>{insumo.nombre}</TableCell>
+
                         <TableCell>
                           {nombresCategoria[insumo.categoria]}
                         </TableCell>
-                        <TableCell>{insumo.stockActual}</TableCell>
-                        <TableCell>{insumo.unidadMedida}</TableCell>
+
+                        <TableCell>
+                          {insumo.stockActual}
+                        </TableCell>
+
+                        <TableCell>
+                          {insumo.unidadMedida}
+                        </TableCell>
 
                         <TableCell>
                           <Chip
@@ -425,7 +629,10 @@ function InsumosPage({ cuenta }) {
                                 size="small"
                                 variant="outlined"
                                 onClick={() =>
-                                  abrirMovimiento(insumo, "INGRESO")
+                                  abrirMovimiento(
+                                    insumo,
+                                    "INGRESO"
+                                  )
                                 }
                               >
                                 Ingresar
@@ -436,7 +643,10 @@ function InsumosPage({ cuenta }) {
                                 variant="outlined"
                                 color="warning"
                                 onClick={() =>
-                                  abrirMovimiento(insumo, "RETIRO")
+                                  abrirMovimiento(
+                                    insumo,
+                                    "RETIRO"
+                                  )
                                 }
                               >
                                 Retirar
@@ -447,7 +657,10 @@ function InsumosPage({ cuenta }) {
                                 variant="outlined"
                                 color="error"
                                 onClick={() =>
-                                  abrirMovimiento(insumo, "CONSUMO")
+                                  abrirMovimiento(
+                                    insumo,
+                                    "CONSUMO"
+                                  )
                                 }
                               >
                                 Consumir
@@ -476,7 +689,10 @@ function InsumosPage({ cuenta }) {
         )}
       </Paper>
 
-      {/* DIALOGO: REGISTRAR INSUMO */}
+      {/* ============================ */}
+      {/* FORMULARIO DE REGISTRO */}
+      {/* ============================ */}
+
       <Dialog
         open={formularioAbierto}
         onClose={() =>
@@ -485,7 +701,9 @@ function InsumosPage({ cuenta }) {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Registrar nuevo insumo</DialogTitle>
+        <DialogTitle>
+          Registrar nuevo insumo
+        </DialogTitle>
 
         <DialogContent>
           {errorFormulario && (
@@ -515,9 +733,17 @@ function InsumosPage({ cuenta }) {
               actualizarCampo("categoria", e.target.value)
             }
           >
-            <MenuItem value="ALIMENTO">Alimento</MenuItem>
-            <MenuItem value="MEDICAMENTO">Medicamento</MenuItem>
-            <MenuItem value="OTRO">Otro</MenuItem>
+            <MenuItem value="ALIMENTO">
+              Alimento
+            </MenuItem>
+
+            <MenuItem value="MEDICAMENTO">
+              Medicamento
+            </MenuItem>
+
+            <MenuItem value="OTRO">
+              Otro
+            </MenuItem>
           </TextField>
 
           <TextField
@@ -537,6 +763,7 @@ function InsumosPage({ cuenta }) {
             required
             fullWidth
             margin="dense"
+            helperText="Ejemplo: kg, litros, unidades"
             value={nuevoInsumo.unidadMedida}
             onChange={(e) =>
               actualizarCampo("unidadMedida", e.target.value)
@@ -550,7 +777,10 @@ function InsumosPage({ cuenta }) {
             fullWidth
             margin="dense"
             slotProps={{
-              htmlInput: { min: 0, step: 0.01 },
+              htmlInput: {
+                min: 0,
+                step: 0.01,
+              },
             }}
             value={nuevoInsumo.stockActual}
             onChange={(e) =>
@@ -564,8 +794,12 @@ function InsumosPage({ cuenta }) {
             required
             fullWidth
             margin="dense"
+            helperText="Cantidad mínima aceptable para el inventario"
             slotProps={{
-              htmlInput: { min: 0, step: 0.01 },
+              htmlInput: {
+                min: 0,
+                step: 0.01,
+              },
             }}
             value={nuevoInsumo.stockMinimo}
             onChange={(e) =>
@@ -587,16 +821,22 @@ function InsumosPage({ cuenta }) {
             disabled={guardando}
             onClick={guardarInsumo}
           >
-            {guardando ? "Guardando..." : "Registrar insumo"}
+            {guardando
+              ? "Guardando..."
+              : "Registrar insumo"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* DIALOGO: INGRESO, RETIRO Y CONSUMO */}
+      {/* ============================ */}
+      {/* FORMULARIO DE MOVIMIENTOS */}
+      {/* ============================ */}
+
       <Dialog
         open={movimientoAbierto}
         onClose={() =>
-          !guardandoMovimiento && setMovimientoAbierto(false)
+          !guardandoMovimiento &&
+          setMovimientoAbierto(false)
         }
         fullWidth
         maxWidth="sm"
@@ -607,7 +847,10 @@ function InsumosPage({ cuenta }) {
 
         <DialogContent>
           {insumoSeleccionado && (
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              color="text.secondary"
+              sx={{ mb: 2 }}
+            >
               {insumoSeleccionado.nombre} — Disponible:{" "}
               {insumoSeleccionado.stockActual}{" "}
               {insumoSeleccionado.unidadMedida}
@@ -631,18 +874,23 @@ function InsumosPage({ cuenta }) {
               setCantidadMovimiento(e.target.value)
             }
             slotProps={{
-              htmlInput: { min: 0.01, step: 0.01 },
+              htmlInput: {
+                min: 0.01,
+                step: 0.01,
+              },
             }}
           />
 
           <TextField
-            label="Observación"
+            label="Observación (opcional)"
             fullWidth
             multiline
             rows={2}
             margin="dense"
             value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
+            onChange={(e) =>
+              setObservacion(e.target.value)
+            }
           />
         </DialogContent>
 
@@ -666,7 +914,10 @@ function InsumosPage({ cuenta }) {
         </DialogActions>
       </Dialog>
 
-      {/* DIALOGO: HISTORIAL DE MOVIMIENTOS */}
+      {/* ============================ */}
+      {/* HISTORIAL DE MOVIMIENTOS */}
+      {/* ============================ */}
+
       <Dialog
         open={historialAbierto}
         onClose={() => setHistorialAbierto(false)}
@@ -679,7 +930,10 @@ function InsumosPage({ cuenta }) {
 
         <DialogContent dividers>
           {insumoSeleccionado && (
-            <Typography fontWeight="bold" sx={{ mb: 2 }}>
+            <Typography
+              fontWeight="bold"
+              sx={{ mb: 2 }}
+            >
               {insumoSeleccionado.nombre}
             </Typography>
           )}
@@ -719,7 +973,9 @@ function InsumosPage({ cuenta }) {
                     const responsable = [
                       movimiento.realizadoPor?.nombre,
                       movimiento.realizadoPor?.apellido,
-                    ].filter(Boolean).join(" ");
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
 
                     return (
                       <TableRow key={movimiento.id}>
@@ -730,10 +986,13 @@ function InsumosPage({ cuenta }) {
                         <TableCell>
                           <Chip
                             label={
-                              tiposMovimiento[movimiento.tipo] ||
-                              movimiento.tipo
+                              tiposMovimiento[
+                                movimiento.tipo
+                              ] || movimiento.tipo
                             }
-                            color={colorMovimiento(movimiento.tipo)}
+                            color={colorMovimiento(
+                              movimiento.tipo
+                            )}
                             size="small"
                           />
                         </TableCell>

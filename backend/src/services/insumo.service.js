@@ -155,3 +155,38 @@ export async function listarMovimientosInsumo(insumoId) {
     },
   });
 }
+
+
+export async function listarAlertasInsumos() {
+  // Consultar únicamente alimentos y medicamentos
+  const insumos = await prisma.insumo.findMany({
+    where: {
+      categoria: {
+        in: ["ALIMENTO", "MEDICAMENTO"],
+      },
+    },
+    select: {
+      id: true,
+      nombre: true,
+      categoria: true,
+      unidadMedida: true,
+      stockActual: true,
+      stockMinimo: true,
+    },
+    orderBy: [
+      { categoria: "asc" },
+      { nombre: "asc" },
+    ],
+  });
+
+  // Identificar insumos que alcanzaron el stock mínimo
+  const insumosBajos = insumos.filter((insumo) =>
+    insumo.stockActual.lte(insumo.stockMinimo)
+  );
+
+  // Generar las alertas
+  return insumosBajos.map((insumo) => ({
+    ...insumo,
+    mensaje: `Stock bajo de ${insumo.nombre}. Quedan ${insumo.stockActual} ${insumo.unidadMedida}.`,
+  }));
+}
