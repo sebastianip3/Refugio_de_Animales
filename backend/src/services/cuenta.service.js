@@ -2,6 +2,39 @@ import bcrypt from 'bcryptjs';
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 
+const CAMPOS_VOLUNTARIO = {
+  id: true,
+  nombre: true,
+  apellido: true,
+  tipo: true,
+  correo: true,
+  horario: true,
+  disponibleCuidado: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
+export function listarVoluntarios() {
+  return prisma.cuenta.findMany({
+    where: { tipo: 'VOLUNTARIO' },
+    select: CAMPOS_VOLUNTARIO,
+    orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+  });
+}
+
+export async function crearVoluntario(datos) {
+  const contrasenaHash = await bcrypt.hash(datos.contrasena, 10);
+  const { contrasena, ...datosVoluntario } = datos;
+  return prisma.cuenta.create({
+    data: {
+      ...datosVoluntario,
+      contrasenaHash,
+      tipo: 'VOLUNTARIO',
+    },
+    select: CAMPOS_VOLUNTARIO,
+  });
+}
+
 export async function cambiarCorreo(id, correo, contrasena) {
   const cuenta = await prisma.cuenta.findUnique({ where: { id } });
   if (!cuenta) throw new AppError(404, 'Cuenta no encontrada');
@@ -37,4 +70,24 @@ export async function cambiarDisponibilidadCuidado(id, disponibleCuidado) {
       disponibleCuidado: true,
     },
   });
+}
+
+export async function eliminarVoluntario(id) {
+  const cuenta = await prisma.cuenta.findUnique({
+    where: { id },
+    select: { id: true, tipo: true },
+  });
+  if (!cuenta || cuenta.tipo !== 'VOLUNTARIO') {
+    throw new AppError(404, 'Voluntario no encontrado');
+  }
+
+  const cantidadCuidados = await prisma.cuidadoAnimal.count({ where: { cuentaId: id } });
+  if (cantidadCuidados > 0) {
+    throw new AppError(
+      409,
+      'No se puede eliminar el voluntario porque tiene registros de cuidado; desactiva su disponibilidad',
+    );
+  }
+
+  return prisma.cuenta.delete({ where: { id } });
 }
