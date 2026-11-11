@@ -5,6 +5,7 @@ import * as cuentaService from '../services/cuenta.service.js';
 import {
   cambiarDisponibilidadCuidadoSchema,
   cambiarCorreoCuentaSchema,
+  crearVoluntarioSchema,
   idVoluntarioSchema,
   loginCuentaSchema,
 } from '../schema/cuenta.schema.js';
@@ -83,6 +84,25 @@ export async function cambiarDisponibilidadCuidado(req, res) {
       disponibleCuidado,
     );
     return res.json(cuenta);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function listarVoluntarios(req, res) {
+  try {
+    const voluntarios = await cuentaService.listarVoluntarios();
+    return res.json(voluntarios);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function crearVoluntario(req, res) {
+  try {
+    const datos = crearVoluntarioSchema.parse(req.body);
+    const voluntario = await cuentaService.crearVoluntario(datos);
+    return res.status(201).json(voluntario);
   } catch (error) {
     return manejarErrorCuenta(res, error);
   }
