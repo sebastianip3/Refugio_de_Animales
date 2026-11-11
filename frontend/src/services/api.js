@@ -93,7 +93,7 @@ export const esterilizacionApi = {
 // inscripciones (admin)
 listarInscripciones: (jornadaId) =>
    request(`/esterilizacion/jornadas/${jornadaId}/inscripciones`),
-ActualizarInscripcion: (id , cambios) =>
+actualizarInscripcion: (id , cambios) =>
   request(`/esterilizacion/inscripciones/${id}`, {method: "PATCH", body: JSON.stringify(cambios)}),
 obtenerInscripcion: (inscripcionId) =>
   request(`/esterilizacion/inscripciones/${inscripcionId}`),
