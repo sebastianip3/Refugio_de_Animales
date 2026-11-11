@@ -10,8 +10,8 @@ import {
   eliminarVoluntario,
 } from '../controllers/cuenta.controller.js';
 import { autenticar } from '../middleware/auth.middleware.js';
-import { permitirCuenta } from '../middleware/rol.middleware.js';
 import { NODE_ENV } from '../config/configEnv.js';
+import { autorizar } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -40,7 +40,7 @@ function autenticarVoluntariado(req, res, next) {
 
 function autorizarGestionVoluntarios(req, res, next) {
   if (esSolicitudLocalDesarrollo(req)) return next();
-  return permitirCuenta('ADMINISTRADOR')(req, res, next);
+  return autorizar('ADMINISTRADOR')(req, res, next);
 }
 
 router.post('/login', iniciarSesion);
