@@ -96,3 +96,34 @@ export async function registrarMovimientoInsumo(req, res) {
     });
   }
 }
+
+
+export async function listarMovimientosInsumo(req, res) {
+  try {
+    const insumoId = Number(req.params.id);
+
+    // Validar el ID recibido
+    if (!Number.isSafeInteger(insumoId) || insumoId <= 0) {
+      return res.status(400).json({
+        message: "ID de insumo inválido",
+      });
+    }
+
+    const movimientos =
+      await insumoService.listarMovimientosInsumo(insumoId);
+
+    if (movimientos === null) {
+      return res.status(404).json({
+        message: "Insumo no encontrado",
+      });
+    }
+
+    return res.status(200).json(movimientos);
+  } catch (error) {
+    console.error("Error al consultar movimientos:", error);
+
+    return res.status(500).json({
+      message: "Error interno del servidor",
+    });
+  }
+}

@@ -1,11 +1,28 @@
 
 import { useCallback, useEffect, useState } from "react";
+
 import {
-  Alert, Box, Button, Chip, CircularProgress, Dialog,
-  DialogActions, DialogContent, DialogTitle, MenuItem,
-  Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TextField, Typography,
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
 } from "@mui/material";
+
 import { insumosApi } from "../services/api.js";
 
 const formularioInicial = {
@@ -23,7 +40,12 @@ const tiposMovimiento = {
   CONSUMO: "Consumo",
 };
 
-// Validar cantidades de hasta dos decimales
+const nombresCategoria = {
+  ALIMENTO: "Alimento",
+  MEDICAMENTO: "Medicamento",
+  OTRO: "Otro",
+};
+
 function cantidadValida(valor, permiteCero = true) {
   const texto = String(valor).trim();
   const numero = Number(texto);
@@ -36,31 +58,57 @@ function cantidadValida(valor, permiteCero = true) {
   );
 }
 
+function formatearFecha(fecha) {
+  return new Date(fecha).toLocaleString("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function InsumosPage({ cuenta }) {
-  // Estados del inventario
+  // Inventario
   const [insumos, setInsumos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [mensajeExito, setMensajeExito] = useState("");
 
-  // Estados del formulario para crear insumos
-  const [formularioAbierto, setFormularioAbierto] = useState(false);
-  const [nuevoInsumo, setNuevoInsumo] = useState({ ...formularioInicial });
+  // Formulario de insumos
+  const [formularioAbierto, setFormularioAbierto] =
+    useState(false);
+  const [nuevoInsumo, setNuevoInsumo] = useState({
+    ...formularioInicial,
+  });
   const [guardando, setGuardando] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState("");
 
-  // Estados del formulario de movimientos
-  const [movimientoAbierto, setMovimientoAbierto] = useState(false);
-  const [insumoSeleccionado, setInsumoSeleccionado] = useState(null);
-  const [tipoMovimiento, setTipoMovimiento] = useState("INGRESO");
-  const [cantidadMovimiento, setCantidadMovimiento] = useState("1");
+  // Formulario de movimientos
+  const [movimientoAbierto, setMovimientoAbierto] =
+    useState(false);
+  const [insumoSeleccionado, setInsumoSeleccionado] =
+    useState(null);
+  const [tipoMovimiento, setTipoMovimiento] =
+    useState("INGRESO");
+  const [cantidadMovimiento, setCantidadMovimiento] =
+    useState("1");
   const [observacion, setObservacion] = useState("");
-  const [guardandoMovimiento, setGuardandoMovimiento] = useState(false);
+  const [guardandoMovimiento, setGuardandoMovimiento] =
+    useState(false);
   const [errorMovimiento, setErrorMovimiento] = useState("");
+
+  // Historial
+  const [historialAbierto, setHistorialAbierto] =
+    useState(false);
+  const [historial, setHistorial] = useState([]);
+  const [cargandoHistorial, setCargandoHistorial] =
+    useState(false);
+  const [errorHistorial, setErrorHistorial] = useState("");
 
   const esAdministrador = cuenta?.tipo === "ADMINISTRADOR";
 
-  // Consultar insumos desde PostgreSQL
+  // Consultar inventario
   const cargarInsumos = useCallback(async () => {
     try {
       setCargando(true);
@@ -69,7 +117,7 @@ function InsumosPage({ cuenta }) {
       const datos = await insumosApi.listar();
       setInsumos(datos);
     } catch (err) {
-      setError(err.message || "No se pudo cargar el inventario.");
+      setError(err.message || "Error al consultar inventario.");
     } finally {
       setCargando(false);
     }
@@ -79,13 +127,19 @@ function InsumosPage({ cuenta }) {
     cargarInsumos();
   }, [cargarInsumos]);
 
-  // Determinar si un producto tiene stock bajo
-  const obtenerEstado = (insumo) =>
-    Number(insumo.stockActual) <= Number(insumo.stockMinimo)
-      ? { texto: "Stock bajo", color: "error" }
-      : { texto: "Disponible", color: "success" };
+  // Estado de existencias
+  const obtenerEstado = (insumo) => {
+    const actual = Number(insumo.stockActual);
+    const minimo = Number(insumo.stockMinimo);
 
-  // Abrir formulario de nuevo insumo
+    if (actual <= minimo) {
+      return { texto: "Stock bajo", color: "error" };
+    }
+
+    return { texto: "Disponible", color: "success" };
+  };
+
+  // Crear insumos
   const abrirFormulario = () => {
     if (!esAdministrador) return;
 
@@ -101,7 +155,6 @@ function InsumosPage({ cuenta }) {
     }));
   };
 
-  // Registrar un nuevo insumo
   const guardarInsumo = async () => {
     if (!esAdministrador || guardando) return;
 
@@ -112,7 +165,7 @@ function InsumosPage({ cuenta }) {
       !cantidadValida(nuevoInsumo.stockMinimo)
     ) {
       setErrorFormulario(
-        "Completa los campos obligatorios. Las cantidades deben ser mayores o iguales a cero y tener hasta dos decimales."
+        "Completa los campos con cantidades válidas de hasta dos decimales."
       );
       return;
     }
@@ -136,15 +189,13 @@ function InsumosPage({ cuenta }) {
 
       await cargarInsumos();
     } catch (err) {
-      setErrorFormulario(
-        err.message || "No se pudo registrar el insumo."
-      );
+      setErrorFormulario(err.message);
     } finally {
       setGuardando(false);
     }
   };
 
-  // Abrir formulario de ingreso, retiro o consumo
+  // Registrar ingresos, retiros y consumos
   const abrirMovimiento = (insumo, tipo) => {
     if (!esAdministrador) return;
 
@@ -156,28 +207,30 @@ function InsumosPage({ cuenta }) {
     setMovimientoAbierto(true);
   };
 
-  // Registrar movimiento en PostgreSQL
   const guardarMovimiento = async () => {
-    if (!esAdministrador || !insumoSeleccionado || guardandoMovimiento) {
+    if (
+      !esAdministrador ||
+      !insumoSeleccionado ||
+      guardandoMovimiento
+    ) {
       return;
     }
 
     if (!cantidadValida(cantidadMovimiento, false)) {
       setErrorMovimiento(
-        "La cantidad debe ser mayor que cero y tener como máximo dos decimales."
+        "Ingresa una cantidad mayor que cero, con hasta dos decimales."
       );
       return;
     }
 
     const cantidad = Number(cantidadMovimiento);
 
-    // Impedir retiros o consumos superiores al stock
     if (
       tipoMovimiento !== "INGRESO" &&
       cantidad > Number(insumoSeleccionado.stockActual)
     ) {
       setErrorMovimiento(
-        "No puedes retirar o consumir más de la cantidad disponible."
+        "No hay stock suficiente para realizar la operación."
       );
       return;
     }
@@ -186,27 +239,53 @@ function InsumosPage({ cuenta }) {
       setGuardandoMovimiento(true);
       setErrorMovimiento("");
 
-      await insumosApi.registrarMovimiento(insumoSeleccionado.id, {
-        tipo: tipoMovimiento,
-        cantidad,
-        observacion: observacion.trim(),
-      });
+      await insumosApi.registrarMovimiento(
+        insumoSeleccionado.id,
+        {
+          tipo: tipoMovimiento,
+          cantidad,
+          observacion: observacion.trim(),
+        }
+      );
 
       setMovimientoAbierto(false);
       setInsumoSeleccionado(null);
 
-      setMensajeExito(
-        `${tiposMovimiento[tipoMovimiento]} registrado correctamente.`
-      );
-
+      setMensajeExito("Movimiento registrado correctamente.");
       await cargarInsumos();
     } catch (err) {
-      setErrorMovimiento(
-        err.message || "No se pudo registrar el movimiento."
-      );
+      setErrorMovimiento(err.message);
     } finally {
       setGuardandoMovimiento(false);
     }
+  };
+
+  // HISTORIAL DE MOVIMIENTOS
+  const abrirHistorial = async (insumo) => {
+    if (!esAdministrador) return;
+
+    setInsumoSeleccionado(insumo);
+    setHistorial([]);
+    setErrorHistorial("");
+    setHistorialAbierto(true);
+    setCargandoHistorial(true);
+
+    try {
+      const datos = await insumosApi.listarMovimientos(insumo.id);
+      setHistorial(datos);
+    } catch (err) {
+      setErrorHistorial(
+        err.message || "No se pudo cargar el historial."
+      );
+    } finally {
+      setCargandoHistorial(false);
+    }
+  };
+
+  const colorMovimiento = (tipo) => {
+    if (tipo === "INGRESO") return "success";
+    if (tipo === "RETIRO") return "warning";
+    return "error";
   };
 
   return (
@@ -217,10 +296,10 @@ function InsumosPage({ cuenta }) {
       </Typography>
 
       <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Inventario de alimentos, medicamentos y otros insumos del refugio.
+        Inventario de alimentos, medicamentos y otros insumos
+        del refugio.
       </Typography>
 
-      {/* ROL Y BOTÓN DE REGISTRO */}
       <Box
         sx={{
           mb: 3,
@@ -251,8 +330,8 @@ function InsumosPage({ cuenta }) {
       {mensajeExito && (
         <Alert
           severity="success"
-          sx={{ mb: 2 }}
           onClose={() => setMensajeExito("")}
+          sx={{ mb: 2 }}
         >
           {mensajeExito}
         </Alert>
@@ -266,7 +345,6 @@ function InsumosPage({ cuenta }) {
             justifyContent: "space-between",
             alignItems: "center",
             gap: 2,
-            flexWrap: "wrap",
             mb: 2,
           }}
         >
@@ -298,7 +376,7 @@ function InsumosPage({ cuenta }) {
                   <TableCell>Unidad</TableCell>
                   <TableCell>Estado</TableCell>
                   {esAdministrador && (
-                    <TableCell>Movimientos</TableCell>
+                    <TableCell>Acciones</TableCell>
                   )}
                 </TableRow>
               </TableHead>
@@ -320,7 +398,9 @@ function InsumosPage({ cuenta }) {
                     return (
                       <TableRow key={insumo.id}>
                         <TableCell>{insumo.nombre}</TableCell>
-                        <TableCell>{insumo.categoria}</TableCell>
+                        <TableCell>
+                          {nombresCategoria[insumo.categoria]}
+                        </TableCell>
                         <TableCell>{insumo.stockActual}</TableCell>
                         <TableCell>{insumo.unidadMedida}</TableCell>
 
@@ -332,7 +412,6 @@ function InsumosPage({ cuenta }) {
                           />
                         </TableCell>
 
-                        {/* Solo los administradores modifican */}
                         {esAdministrador && (
                           <TableCell>
                             <Box
@@ -373,6 +452,17 @@ function InsumosPage({ cuenta }) {
                               >
                                 Consumir
                               </Button>
+
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="info"
+                                onClick={() =>
+                                  abrirHistorial(insumo)
+                                }
+                              >
+                                Historial
+                              </Button>
                             </Box>
                           </TableCell>
                         )}
@@ -386,10 +476,12 @@ function InsumosPage({ cuenta }) {
         )}
       </Paper>
 
-      {/* FORMULARIO DE REGISTRO DE INSUMOS */}
+      {/* DIALOGO: REGISTRAR INSUMO */}
       <Dialog
         open={formularioAbierto}
-        onClose={() => !guardando && setFormularioAbierto(false)}
+        onClose={() =>
+          !guardando && setFormularioAbierto(false)
+        }
         fullWidth
         maxWidth="sm"
       >
@@ -445,7 +537,6 @@ function InsumosPage({ cuenta }) {
             required
             fullWidth
             margin="dense"
-            helperText="Ejemplo: kg, litros, unidades"
             value={nuevoInsumo.unidadMedida}
             onChange={(e) =>
               actualizarCampo("unidadMedida", e.target.value)
@@ -501,7 +592,7 @@ function InsumosPage({ cuenta }) {
         </DialogActions>
       </Dialog>
 
-      {/* FORMULARIO DE MOVIMIENTOS */}
+      {/* DIALOGO: INGRESO, RETIRO Y CONSUMO */}
       <Dialog
         open={movimientoAbierto}
         onClose={() =>
@@ -545,15 +636,13 @@ function InsumosPage({ cuenta }) {
           />
 
           <TextField
-            label="Observación (opcional)"
+            label="Observación"
             fullWidth
             multiline
             rows={2}
             margin="dense"
             value={observacion}
-            onChange={(e) =>
-              setObservacion(e.target.value)
-            }
+            onChange={(e) => setObservacion(e.target.value)}
           />
         </DialogContent>
 
@@ -572,7 +661,110 @@ function InsumosPage({ cuenta }) {
           >
             {guardandoMovimiento
               ? "Guardando..."
-              : `Confirmar ${tiposMovimiento[tipoMovimiento].toLowerCase()}`}
+              : "Confirmar movimiento"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* DIALOGO: HISTORIAL DE MOVIMIENTOS */}
+      <Dialog
+        open={historialAbierto}
+        onClose={() => setHistorialAbierto(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          Historial de movimientos
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {insumoSeleccionado && (
+            <Typography fontWeight="bold" sx={{ mb: 2 }}>
+              {insumoSeleccionado.nombre}
+            </Typography>
+          )}
+
+          {errorHistorial && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errorHistorial}
+            </Alert>
+          )}
+
+          {cargandoHistorial ? (
+            <Box sx={{ textAlign: "center", p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : !errorHistorial && historial.length === 0 ? (
+            <Alert severity="info">
+              Este insumo todavía no tiene movimientos.
+            </Alert>
+          ) : !errorHistorial && (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Fecha</TableCell>
+                    <TableCell>Operación</TableCell>
+                    <TableCell>Cantidad</TableCell>
+                    <TableCell>Responsable</TableCell>
+                    <TableCell>Observación</TableCell>
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {historial.map((movimiento) => {
+                    const esIngreso =
+                      movimiento.tipo === "INGRESO";
+
+                    const responsable = [
+                      movimiento.realizadoPor?.nombre,
+                      movimiento.realizadoPor?.apellido,
+                    ].filter(Boolean).join(" ");
+
+                    return (
+                      <TableRow key={movimiento.id}>
+                        <TableCell>
+                          {formatearFecha(movimiento.fecha)}
+                        </TableCell>
+
+                        <TableCell>
+                          <Chip
+                            label={
+                              tiposMovimiento[movimiento.tipo] ||
+                              movimiento.tipo
+                            }
+                            color={colorMovimiento(movimiento.tipo)}
+                            size="small"
+                          />
+                        </TableCell>
+
+                        <TableCell>
+                          {esIngreso ? "+" : "-"}
+                          {movimiento.cantidad}{" "}
+                          {insumoSeleccionado?.unidadMedida}
+                        </TableCell>
+
+                        <TableCell>
+                          {responsable || "Sin información"}
+                        </TableCell>
+
+                        <TableCell>
+                          {movimiento.observacion || "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setHistorialAbierto(false)}
+          >
+            Cerrar
           </Button>
         </DialogActions>
       </Dialog>

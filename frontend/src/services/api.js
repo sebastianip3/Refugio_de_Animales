@@ -117,5 +117,8 @@ export const insumosApi = {
       method: "POST",
       body: JSON.stringify(movimiento),
     }),
+
+  listarMovimientos: (id) => 
+    request(`/insumos/${id}/movimientos`),
 };
 

@@ -119,3 +119,39 @@ export async function registrarMovimientoInsumo(
   });
 }
 
+
+export async function listarMovimientosInsumo(insumoId) {
+  // Comprobar que el insumo exista
+  const insumo = await prisma.insumo.findUnique({
+    where: { id: insumoId },
+    select: { id: true },
+  });
+
+  if (!insumo) {
+    return null;
+  }
+
+  // Obtener historial de movimientos
+  return prisma.movimientoInsumo.findMany({
+    where: {
+      insumoId,
+    },
+    orderBy: [
+      { fecha: "desc" },
+      { id: "desc" },
+    ],
+    select: {
+      id: true,
+      tipo: true,
+      cantidad: true,
+      observacion: true,
+      fecha: true,
+      realizadoPor: {
+        select: {
+          nombre: true,
+          apellido: true,
+        },
+      },
+    },
+  });
+}

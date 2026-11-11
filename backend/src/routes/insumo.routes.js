@@ -5,6 +5,7 @@ import {
   listarInsumos,
   crearInsumo,
   registrarMovimientoInsumo,
+  listarMovimientosInsumo,
 } from "../controllers/insumo.controller.js";
 import { autenticar } from "../middleware/auth.middleware.js";
 
@@ -38,6 +39,14 @@ router.post(
   autenticar,
   permitirCuenta("ADMINISTRADOR"),
   registrarMovimientoInsumo
+);
+
+
+router.get(
+  "/:id/movimientos",
+  autenticar,
+  permitirCuenta("ADMINISTRADOR"),
+  listarMovimientosInsumo
 );
 
 export default router;
