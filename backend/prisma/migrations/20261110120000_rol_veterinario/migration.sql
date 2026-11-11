@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "TipoCuenta" ADD VALUE 'VETERINARIO';

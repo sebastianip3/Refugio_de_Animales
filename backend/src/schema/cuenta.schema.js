@@ -16,3 +16,16 @@ export const cambiarCorreoCuentaSchema = z.object({
 export const cambiarDisponibilidadCuidadoSchema = z.object({
   disponibleCuidado: z.boolean(),
 });
+
+export const idVoluntarioSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+export const crearVoluntarioSchema = z.object({
+  nombre: z.string().trim().min(1).max(100),
+  apellido: z.string().trim().min(1).max(100),
+  correo: correoSchema,
+  contrasena: z.string().min(8).max(72),
+  horario: z.string().trim().max(255).optional().transform((valor) => valor || null),
+  disponibleCuidado: z.boolean().default(true),
+});

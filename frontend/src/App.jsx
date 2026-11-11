@@ -8,6 +8,7 @@ import HistorialPage from "./pages/HistorialPage.jsx";
 import CuidadosPage from "./pages/CuidadosPage.jsx";
 import PerfilPage from "./pages/PerfilPage.jsx";
 import InscripcionEsterilizacionPage from "./pages/inscripcionEsterilizacionPage.jsx";
+import VoluntariadoPage from "./pages/VoluntariadoPage.jsx";
 import Layout from "./components/Layout.jsx";
 import { cuentasApi, EVENTO_SESION_CERRADA } from "./services/api.js";
 import EsterilizacionPage from "./pages/EsterilizacionPage.jsx";
@@ -18,13 +19,14 @@ const PAGINAS = {
   adopciones: AdopcionesPage,
   historial: HistorialPage,
   cuidados: CuidadosPage,
+  voluntariado: VoluntariadoPage,
   perfil: PerfilPage,
   esterilizacion: EsterilizacionPage,
 };
 
 function App() {
   const [registrado, setRegistrado] = useState(false);
-  const [pagina, setPagina] = useState("inicio");
+  const [pagina, setPagina] = useState(import.meta.env.DEV ? "voluntariado" : "inicio");
   // Cuenta del personal con sesión iniciada; null para los adoptantes
   const [cuenta, setCuenta] = useState(null);
   const [enLogin, setEnLogin] = useState(false);
@@ -46,6 +48,11 @@ function App() {
   // JavaScript no puede leer la cookie httpOnly, así que al cargar se pregunta
   // al backend si hay una sesión abierta (si no la hay, responde 401)
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      setCargandoSesion(false);
+      return;
+    }
+
     cuentasApi
       .perfil()
       .then(setCuenta)
@@ -64,7 +71,7 @@ function App() {
 
   if (cargandoSesion) return <p>Cargando...</p>;
 
-  if (!registrado && !cuenta) {
+  if (!registrado && !cuenta && !import.meta.env.DEV) {
     if (enLogin) {
       return (
         <LoginPage

@@ -39,6 +39,17 @@ export const animalesApi = {
   eliminar: (id) => request(`/animales/${id}`, { method: "DELETE" }),
 };
 
+// Solo el veterinario (o un administrador) puede crear y editar registros
+export const registrosClinicosApi = {
+  crear: (animalId, registro) =>
+    request(`/animales/${animalId}/historial`, { method: "POST", body: JSON.stringify(registro) }),
+  actualizar: (animalId, registroId, cambios) =>
+    request(`/animales/${animalId}/historial/${registroId}`, {
+      method: "PATCH",
+      body: JSON.stringify(cambios),
+    }),
+};
+
 export const especiesApi = {
   listar: () => request("/especies"),
 };
@@ -48,6 +59,10 @@ export const cuentasApi = {
     request("/cuentas/login", { method: "POST", body: JSON.stringify(credenciales) }),
   logout: () => request("/cuentas/logout", { method: "POST" }),
   perfil: () => request("/cuentas/perfil"),
+  listarVoluntarios: () => request("/cuentas/voluntarios"),
+  crearVoluntario: (datos) =>
+    request("/cuentas/voluntarios", { method: "POST", body: JSON.stringify(datos) }),
+  eliminarVoluntario: (id) => request(`/cuentas/${id}`, { method: "DELETE" }),
 };
 
 export const adopcionesApi = {

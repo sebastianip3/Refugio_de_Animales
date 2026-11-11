@@ -164,14 +164,14 @@ function Layout({ children, paginaActual, onNavegar, cuenta, onCerrarSesion, onI
                 Cerrar sesión
               </ListItemButton>
             </>
-          ) : (
+          ) : !import.meta.env.DEV ? (
             <ListItemButton
               onClick={onIniciarSesion}
               sx={{ borderRadius: 2, color: "#d1d5db", "&:hover": { backgroundColor: "#374151" } }}
             >
               Iniciar sesión (personal)
             </ListItemButton>
-          )}
+          ) : null}
         </Box>
       </Drawer>
 
