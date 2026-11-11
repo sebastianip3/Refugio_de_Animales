@@ -1,18 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { cuidadosApi } from "../services/api.js";
 
-const estiloCeldaTabla = {
-  border: "1px solid #7b8b70",
-  padding: "10px 12px",
-  textAlign: "left",
-};
-
-const estiloCabeceraTabla = {
-  ...estiloCeldaTabla,
-  backgroundColor: "#b63c0c",
-  color: "#ffffff",
-};
-
 function horarioInicial(horasAdelante) {
   const fecha = new Date();
   fecha.setMinutes(0, 0, 0);
@@ -85,129 +73,155 @@ function CuidadosPage() {
   };
 
   return (
-    <main
-    style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        boxSizing: "border-box",
-        backgroundColor: '#f57657'
-      }}>
-      <h1>Cuidados</h1>
+    <section className="min-h-screen bg-emerald-50 p-6">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-800">🤝 Cuidados</h1>
+          <p className="mt-1 text-slate-600">
+            Consulta y prepara la asignación de cuidadores para los animales del refugio.
+          </p>
+        </header>
 
-      {error && <p role="alert">{error}</p>}
+        {error && (
+          <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+            {error}
+          </p>
+        )}
 
-      {cargando ? (
-        <p role="status">Cargando animales...</p>
-      ) : animales.length === 0 ? (
-        <p>No hay animales registrados.</p>
-      ) : (
-        <div style={{ width: "100%", maxWidth: "1100px", overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              border: "2px solid #5e1b07",
-              backgroundColor: "#ffffff",
-              color: "#030507",
-            }}
-          >
-            <thead>
-              <tr>
-                <th style={estiloCabeceraTabla}>ID del animal</th>
-                <th style={estiloCabeceraTabla}>Nombre del animal</th>
-                <th style={estiloCabeceraTabla}>Ayudante encargado</th>
-                <th style={estiloCabeceraTabla}>ID del ayudante</th>
-              </tr>
-            </thead>
-            <tbody>
-              {animales.map((animal) => (
-                <Fragment key={animal.id}>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-slate-800">
+            Animales {!cargando && (
+              <span className="text-base font-normal text-slate-500">({animales.length})</span>
+            )}
+          </h2>
+
+          {cargando ? (
+            <p role="status" className="text-slate-500">Cargando animales...</p>
+          ) : animales.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 p-6 text-center text-slate-500">
+              No hay animales registrados.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
-                    <td style={estiloCeldaTabla}>{animal.id}</td>
-                    <td style={estiloCeldaTabla}>{animal.nombre || "Sin nombre"}</td>
-                    <td style={estiloCeldaTabla}>
-                      {animal.cuidador
-                        ? `${animal.cuidador.nombre} ${animal.cuidador.apellido}`
-                        : animalAbiertoId === animal.id
-                          ? (
-                            <button type="button" onClick={() => alternarAsignacion(animal.id)}>
-                              Cerrar
-                            </button>
-                          )
-                          : (
-                            <button type="button" onClick={() => alternarAsignacion(animal.id)}>
-                              Asignar
-                            </button>
-                          )}
-                    </td>
-                    <td style={estiloCeldaTabla}>{animal.cuidador?.id ?? "—"}</td>
+                    <th className="px-3 py-3">ID del animal</th>
+                    <th className="px-3 py-3">Nombre del animal</th>
+                    <th className="px-3 py-3">Ayudante encargado</th>
+                    <th className="px-3 py-3">ID del ayudante</th>
                   </tr>
-                  {animalAbiertoId === animal.id && !animal.cuidador && (
-                    <tr>
-                      <td colSpan="4" style={estiloCeldaTabla}>
-                        <fieldset>
-                          <legend>Seleccionar voluntario y horario</legend>
-                          <label>
-                            Desde{" "}
-                            <input
-                              type="datetime-local"
-                              value={fechaInicio}
-                              onChange={(event) => setFechaInicio(event.target.value)}
-                            />
-                          </label>{" "}
-                          <label>
-                            Hasta{" "}
-                            <input
-                              type="datetime-local"
-                              value={fechaFin}
-                              onChange={(event) => setFechaFin(event.target.value)}
-                            />
-                          </label>
-
-                          {errorDisponibilidad && <p role="alert">{errorDisponibilidad}</p>}
-                          {consultando ? (
-                            <p role="status">Buscando voluntarios disponibles...</p>
-                          ) : asignacionesAnimal.length > 0 ? (
-                            <p>Este animal ya tiene un cuidado asignado en ese horario.</p>
+                </thead>
+                <tbody>
+                  {animales.map((animal) => (
+                    <Fragment key={animal.id}>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-3 py-3 text-slate-500">{animal.id}</td>
+                        <td className="px-3 py-3 font-medium text-slate-800">
+                          {animal.nombre || "Sin nombre"}
+                        </td>
+                        <td className="px-3 py-3">
+                          {animal.cuidador ? (
+                            <span className="text-slate-800">
+                              {animal.cuidador.nombre} {animal.cuidador.apellido}
+                            </span>
                           ) : (
-                            <label>
-                              Voluntario{" "}
-                              <select
-                                value={personaSeleccionadaId}
-                                onChange={(event) => setPersonaSeleccionadaId(event.target.value)}
-                                disabled={personasDisponibles.length === 0}
-                              >
-                                <option value="">Selecciona un voluntario</option>
-                                {personasDisponibles.map((persona) => (
-                                  <option key={persona.id} value={persona.id}>
-                                    {persona.nombre} {persona.apellido} (ID: {persona.id})
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            <button
+                              type="button"
+                              onClick={() => alternarAsignacion(animal.id)}
+                              className="cursor-pointer rounded-md border border-emerald-200 px-3 py-1 font-medium text-emerald-700 hover:bg-emerald-50"
+                            >
+                              {animalAbiertoId === animal.id ? "Cerrar" : "Asignar"}
+                            </button>
                           )}
-                          {!consultando
-                            && !errorDisponibilidad
-                            && asignacionesAnimal.length === 0
-                            && personasDisponibles.length === 0 && (
-                              <p>No hay voluntarios disponibles para ese horario.</p>
-                          )}
-                          <p>La asignación todavía no se guarda desde esta página.</p>
-                        </fieldset>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="px-3 py-3 text-slate-500">
+                          {animal.cuidador?.id ?? "—"}
+                        </td>
+                      </tr>
+                      {animalAbiertoId === animal.id && !animal.cuidador && (
+                        <tr className="border-b border-slate-100 bg-slate-50">
+                          <td colSpan="4" className="px-3 py-4">
+                            <fieldset className="rounded-lg border border-slate-200 bg-white p-4">
+                              <legend className="px-2 font-medium text-slate-700">
+                                Seleccionar voluntario y horario
+                              </legend>
+                              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <label className="block text-sm font-medium text-slate-700">
+                                  Desde
+                                  <input
+                                    type="datetime-local"
+                                    value={fechaInicio}
+                                    onChange={(event) => setFechaInicio(event.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                                  />
+                                </label>
+                                <label className="block text-sm font-medium text-slate-700">
+                                  Hasta
+                                  <input
+                                    type="datetime-local"
+                                    value={fechaFin}
+                                    onChange={(event) => setFechaFin(event.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                                  />
+                                </label>
+                                <label className="block text-sm font-medium text-slate-700">
+                                  Voluntario
+                                  <select
+                                    value={personaSeleccionadaId}
+                                    onChange={(event) => setPersonaSeleccionadaId(event.target.value)}
+                                    disabled={consultando || personasDisponibles.length === 0}
+                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:bg-slate-100"
+                                  >
+                                    <option value="">Selecciona un voluntario</option>
+                                    {personasDisponibles.map((persona) => (
+                                      <option key={persona.id} value={persona.id}>
+                                        {persona.nombre} {persona.apellido} (ID: {persona.id})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              </div>
+
+                              {errorDisponibilidad && (
+                                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+                                  {errorDisponibilidad}
+                                </p>
+                              )}
+                              {consultando && (
+                                <p role="status" className="mt-3 text-slate-500">
+                                  Buscando voluntarios disponibles...
+                                </p>
+                              )}
+                              {!consultando && !errorDisponibilidad && asignacionesAnimal.length > 0 && (
+                                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
+                                  Este animal ya tiene un cuidado asignado en ese horario.
+                                </p>
+                              )}
+                              {!consultando
+                                && !errorDisponibilidad
+                                && asignacionesAnimal.length === 0
+                                && personasDisponibles.length === 0 && (
+                                  <p className="mt-3 text-slate-500">
+                                    No hay voluntarios disponibles para ese horario.
+                                  </p>
+                              )}
+                              <p className="mt-3 text-sm text-slate-500">
+                                La asignación todavía no se guarda desde esta página.
+                              </p>
+                            </fieldset>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
-    </main>
+      </div>
+    </section>
   );
 }
 
