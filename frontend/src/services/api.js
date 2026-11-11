@@ -63,6 +63,12 @@ export const cuentasApi = {
   crearVoluntario: (datos) =>
     request("/cuentas/voluntarios", { method: "POST", body: JSON.stringify(datos) }),
   eliminarVoluntario: (id) => request(`/cuentas/${id}`, { method: "DELETE" }),
+  obtenerCalendarioVoluntariado: () => request("/cuentas/voluntarios/calendario"),
+  guardarDisponibilidadVoluntario: (id, bloques) =>
+    request(`/cuentas/voluntarios/${id}/disponibilidad`, {
+      method: "PUT",
+      body: JSON.stringify({ bloques }),
+    }),
 };
 
 export const adopcionesApi = {

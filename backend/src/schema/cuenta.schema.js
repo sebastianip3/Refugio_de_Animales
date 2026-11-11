@@ -29,3 +29,13 @@ export const crearVoluntarioSchema = z.object({
   horario: z.string().trim().max(255).optional().transform((valor) => valor || null),
   disponibleCuidado: z.boolean().default(true),
 });
+
+export const bloqueHorarioSchema = z.object({
+  diaSemana: z.number().int().min(0).max(6),
+  hora: z.number().int().min(8).max(19),
+});
+
+export const actualizarDisponibilidadHorariaSchema = z.object({
+  bloques: z.array(bloqueHorarioSchema).max(84),
+});
+

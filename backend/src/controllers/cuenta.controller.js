@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import * as authService from '../services/auth.service.js';
 import * as cuentaService from '../services/cuenta.service.js';
 import {
+  actualizarDisponibilidadHorariaSchema,
   cambiarDisponibilidadCuidadoSchema,
   cambiarCorreoCuentaSchema,
   crearVoluntarioSchema,
@@ -119,6 +120,36 @@ export async function eliminarVoluntario(req, res) {
         message: 'No se puede eliminar el voluntario porque tiene registros de cuidado; desactiva su disponibilidad',
       });
     }
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function obtenerCalendarioVoluntariado(req, res) {
+  try {
+    const calendario = await cuentaService.obtenerCalendarioVoluntariado();
+    return res.json(calendario);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function actualizarDisponibilidadHoraria(req, res) {
+  try {
+    const { id } = idVoluntarioSchema.parse(req.params);
+    const { bloques } = actualizarDisponibilidadHorariaSchema.parse(req.body);
+
+    if (req.cuenta) {
+      if (req.cuenta.tipo === 'VOLUNTARIO' && req.cuenta.id !== id) {
+        throw new AppError(403, 'Solo puedes modificar tu propia disponibilidad horaria');
+      }
+      if (!['VOLUNTARIO', 'ADMINISTRADOR'].includes(req.cuenta.tipo)) {
+        throw new AppError(403, 'No tienes permisos para modificar horarios de voluntariado');
+      }
+    }
+
+    const calendarioActualizado = await cuentaService.actualizarDisponibilidadHoraria(id, bloques);
+    return res.json(calendarioActualizado);
+  } catch (error) {
     return manejarErrorCuenta(res, error);
   }
 }

@@ -98,11 +98,42 @@ model Cuenta {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  cuidados CuidadoAnimal[]
-  movimientosInsumos MovimientoInsumo[]
+  cuidados                   CuidadoAnimal[]
+  movimientosInsumos         MovimientoInsumo[]
+  disponibilidadesVoluntario DisponibilidadVoluntario[]
+  turnosVoluntario           TurnoVoluntario[]
 
   @@index([tipo, disponibleCuidado])
   @@map("cuentas")
+}
+
+model DisponibilidadVoluntario {
+  id        Int      @id @default(autoincrement())
+  diaSemana Int
+  hora      Int
+  createdAt DateTime @default(now())
+
+  cuentaId Int
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  @@unique([cuentaId, diaSemana, hora])
+  @@index([diaSemana, hora])
+  @@map("disponibilidades_voluntarios")
+}
+
+model TurnoVoluntario {
+  id        Int      @id @default(autoincrement())
+  diaSemana Int
+  hora      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cuentaId Int
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  @@unique([diaSemana, hora])
+  @@index([cuentaId])
+  @@map("turnos_voluntarios")
 }
 
 model Especie {

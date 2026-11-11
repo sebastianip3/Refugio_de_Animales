@@ -8,6 +8,8 @@ import {
   listarVoluntarios,
   crearVoluntario,
   eliminarVoluntario,
+  obtenerCalendarioVoluntariado,
+  actualizarDisponibilidadHoraria,
 } from '../controllers/cuenta.controller.js';
 import { autenticar } from '../middleware/auth.middleware.js';
 import { NODE_ENV } from '../config/configEnv.js';
@@ -48,6 +50,8 @@ router.post('/logout', cerrarSesion);
 router.get('/perfil', autenticar, obtenerPerfil);
 router.patch('/correo', autenticar, cambiarCorreo);
 router.patch('/disponibilidad-cuidado', autenticar, cambiarDisponibilidadCuidado);
+router.get('/voluntarios/calendario', autenticarVoluntariado, obtenerCalendarioVoluntariado);
+router.put('/voluntarios/:id/disponibilidad', autenticarVoluntariado, actualizarDisponibilidadHoraria);
 router.get('/voluntarios', autenticarVoluntariado, listarVoluntarios);
 router.post('/voluntarios', autenticarVoluntariado, crearVoluntario);
 router.delete('/:id', autenticarVoluntariado, autorizarGestionVoluntarios, eliminarVoluntario);
