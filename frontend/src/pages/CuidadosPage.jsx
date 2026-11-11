@@ -9,10 +9,11 @@ function horarioInicial(horasAdelante) {
   return new Date(fecha.getTime() - desplazamiento).toISOString().slice(0, 16);
 }
 
-function CuidadosPage() {
+function CuidadosPage({ cuenta, onIniciarSesion }) {
   const [animales, setAnimales] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
   const [animalAbiertoId, setAnimalAbiertoId] = useState(null);
   const [fechaInicio, setFechaInicio] = useState(() => horarioInicial(1));
   const [fechaFin, setFechaFin] = useState(() => horarioInicial(2));
@@ -21,12 +22,21 @@ function CuidadosPage() {
   const [personaSeleccionadaId, setPersonaSeleccionadaId] = useState("");
   const [consultando, setConsultando] = useState(false);
   const [errorDisponibilidad, setErrorDisponibilidad] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  const cargarAnimales = async () => {
+    try {
+      setAnimales(await cuidadosApi.listarAnimales());
+      setError("");
+    } catch (err) {
+      setError(`No se pudieron cargar los cuidados: ${err.message}`);
+    } finally {
+      setCargando(false);
+    }
+  };
 
   useEffect(() => {
-    cuidadosApi.listarAnimales()
-      .then(setAnimales)
-      .catch((err) => setError(`No se pudieron cargar los cuidados: ${err.message}`))
-      .finally(() => setCargando(false));
+    cargarAnimales();
   }, []);
 
   useEffect(() => {
@@ -70,7 +80,42 @@ function CuidadosPage() {
     setAnimalAbiertoId((actual) => actual === animalId ? null : animalId);
     setErrorDisponibilidad("");
     setPersonaSeleccionadaId("");
+    setMensaje("");
   };
+
+  const guardarAsignacion = async (event, animalId) => {
+    event.preventDefault();
+    setErrorDisponibilidad("");
+    setMensaje("");
+
+    if (!personaSeleccionadaId) {
+      setErrorDisponibilidad("Selecciona un voluntario.");
+      return;
+    }
+    if (new Date(fechaInicio) >= new Date(fechaFin)) {
+      setErrorDisponibilidad("La fecha de inicio debe ser anterior a la fecha de término.");
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      await cuidadosApi.asignar({
+        animalId,
+        cuentaId: Number(personaSeleccionadaId),
+        fechaInicio: new Date(fechaInicio).toISOString(),
+        fechaFin: new Date(fechaFin).toISOString(),
+      });
+      setMensaje("El cuidado se asignó correctamente.");
+      setAnimalAbiertoId(null);
+      await cargarAnimales();
+    } catch (err) {
+      setErrorDisponibilidad(`No se pudo asignar el cuidado: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const esAdministrador = cuenta?.tipo === "ADMINISTRADOR";
 
   return (
     <section className="min-h-screen bg-emerald-50 p-6">
@@ -85,6 +130,11 @@ function CuidadosPage() {
         {error && (
           <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
             {error}
+          </p>
+        )}
+        {mensaje && (
+          <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">
+            {mensaje}
           </p>
         )}
 
@@ -125,13 +175,23 @@ function CuidadosPage() {
                             <span className="text-slate-800">
                               {animal.cuidador.nombre} {animal.cuidador.apellido}
                             </span>
-                          ) : (
+                          ) : esAdministrador ? (
                             <button
                               type="button"
                               onClick={() => alternarAsignacion(animal.id)}
                               className="cursor-pointer rounded-md border border-emerald-200 px-3 py-1 font-medium text-emerald-700 hover:bg-emerald-50"
                             >
                               {animalAbiertoId === animal.id ? "Cerrar" : "Asignar"}
+                            </button>
+                          ) : cuenta ? (
+                            <span className="text-slate-500">Solo administradores</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={onIniciarSesion}
+                              className="cursor-pointer rounded-md border border-slate-300 px-3 py-1 font-medium text-slate-700 hover:bg-slate-100"
+                            >
+                              Iniciar sesión
                             </button>
                           )}
                         </td>
@@ -142,74 +202,80 @@ function CuidadosPage() {
                       {animalAbiertoId === animal.id && !animal.cuidador && (
                         <tr className="border-b border-slate-100 bg-slate-50">
                           <td colSpan="4" className="px-3 py-4">
-                            <fieldset className="rounded-lg border border-slate-200 bg-white p-4">
-                              <legend className="px-2 font-medium text-slate-700">
-                                Seleccionar voluntario y horario
-                              </legend>
-                              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                <label className="block text-sm font-medium text-slate-700">
-                                  Desde
-                                  <input
-                                    type="datetime-local"
-                                    value={fechaInicio}
-                                    onChange={(event) => setFechaInicio(event.target.value)}
-                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                                  />
-                                </label>
-                                <label className="block text-sm font-medium text-slate-700">
-                                  Hasta
-                                  <input
-                                    type="datetime-local"
-                                    value={fechaFin}
-                                    onChange={(event) => setFechaFin(event.target.value)}
-                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                                  />
-                                </label>
-                                <label className="block text-sm font-medium text-slate-700">
-                                  Voluntario
-                                  <select
-                                    value={personaSeleccionadaId}
-                                    onChange={(event) => setPersonaSeleccionadaId(event.target.value)}
-                                    disabled={consultando || personasDisponibles.length === 0}
-                                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:bg-slate-100"
-                                  >
-                                    <option value="">Selecciona un voluntario</option>
-                                    {personasDisponibles.map((persona) => (
-                                      <option key={persona.id} value={persona.id}>
-                                        {persona.nombre} {persona.apellido} (ID: {persona.id})
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                              </div>
+                            <form onSubmit={(event) => guardarAsignacion(event, animal.id)}>
+                              <fieldset className="rounded-lg border border-slate-200 bg-white p-4" disabled={guardando}>
+                                <legend className="px-2 font-medium text-slate-700">
+                                  Seleccionar voluntario y horario
+                                </legend>
+                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                  <label className="block text-sm font-medium text-slate-700">
+                                    Desde
+                                    <input
+                                      type="datetime-local"
+                                      value={fechaInicio}
+                                      onChange={(event) => setFechaInicio(event.target.value)}
+                                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                                    />
+                                  </label>
+                                  <label className="block text-sm font-medium text-slate-700">
+                                    Hasta
+                                    <input
+                                      type="datetime-local"
+                                      value={fechaFin}
+                                      onChange={(event) => setFechaFin(event.target.value)}
+                                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                                    />
+                                  </label>
+                                  <label className="block text-sm font-medium text-slate-700">
+                                    Voluntario
+                                    <select
+                                      value={personaSeleccionadaId}
+                                      onChange={(event) => setPersonaSeleccionadaId(event.target.value)}
+                                      disabled={consultando || personasDisponibles.length === 0}
+                                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:bg-slate-100"
+                                    >
+                                      <option value="">Selecciona un voluntario</option>
+                                      {personasDisponibles.map((persona) => (
+                                        <option key={persona.id} value={persona.id}>
+                                          {persona.nombre} {persona.apellido} (ID: {persona.id})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
 
-                              {errorDisponibilidad && (
-                                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
-                                  {errorDisponibilidad}
-                                </p>
-                              )}
-                              {consultando && (
-                                <p role="status" className="mt-3 text-slate-500">
-                                  Buscando voluntarios disponibles...
-                                </p>
-                              )}
-                              {!consultando && !errorDisponibilidad && asignacionesAnimal.length > 0 && (
-                                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
-                                  Este animal ya tiene un cuidado asignado en ese horario.
-                                </p>
-                              )}
-                              {!consultando
-                                && !errorDisponibilidad
-                                && asignacionesAnimal.length === 0
-                                && personasDisponibles.length === 0 && (
-                                  <p className="mt-3 text-slate-500">
-                                    No hay voluntarios disponibles para ese horario.
+                                {errorDisponibilidad && (
+                                  <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+                                    {errorDisponibilidad}
                                   </p>
-                              )}
-                              <p className="mt-3 text-sm text-slate-500">
-                                La asignación todavía no se guarda desde esta página.
-                              </p>
-                            </fieldset>
+                                )}
+                                {consultando && (
+                                  <p role="status" className="mt-3 text-slate-500">
+                                    Buscando voluntarios disponibles...
+                                  </p>
+                                )}
+                                {!consultando && !errorDisponibilidad && asignacionesAnimal.length > 0 && (
+                                  <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
+                                    Este animal ya tiene un cuidado asignado en ese horario.
+                                  </p>
+                                )}
+                                {!consultando
+                                  && !errorDisponibilidad
+                                  && asignacionesAnimal.length === 0
+                                  && personasDisponibles.length === 0 && (
+                                    <p className="mt-3 text-slate-500">
+                                      No hay voluntarios disponibles para ese horario.
+                                    </p>
+                                )}
+                                <button
+                                  type="submit"
+                                  disabled={guardando || consultando || asignacionesAnimal.length > 0 || !personaSeleccionadaId}
+                                  className="mt-4 cursor-pointer rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                >
+                                  {guardando ? "Guardando..." : "Guardar asignación"}
+                                </button>
+                              </fieldset>
+                            </form>
                           </td>
                         </tr>
                       )}

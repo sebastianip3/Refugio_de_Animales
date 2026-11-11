@@ -73,19 +73,19 @@ function App() {
 
   if (cargandoSesion) return <p>Cargando...</p>;
 
-  if (!registrado && !cuenta && !import.meta.env.DEV) {
-    if (enLogin) {
-      return (
-        <LoginPage
-          onLogin={(cuentaIniciada) => {
-            setCuenta(cuentaIniciada);
-            setEnLogin(false);
-          }}
-          onVolver={() => setEnLogin(false)}
-        />
-      );
-    }
+  if (enLogin) {
+    return (
+      <LoginPage
+        onLogin={(cuentaIniciada) => {
+          setCuenta(cuentaIniciada);
+          setEnLogin(false);
+        }}
+        onVolver={() => setEnLogin(false)}
+      />
+    );
+  }
 
+  if (!registrado && !cuenta && !import.meta.env.DEV) {
     return (
       <RegistroPage
         onRegistro={() => setRegistrado(true)}
@@ -108,7 +108,11 @@ function App() {
       }}
     >
       {Pagina ? (
-        <Pagina cuenta={cuenta} onNavegar={setPagina} />
+        <Pagina
+          cuenta={cuenta}
+          onNavegar={setPagina}
+          onIniciarSesion={() => setEnLogin(true)}
+        />
       ) : (
         <p>Sección en construcción.</p>
       )}
