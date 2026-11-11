@@ -148,6 +148,20 @@ function InsumosPage({ cuenta }) {
   // Comprobar permisos del usuario
   const esAdministrador = cuenta?.tipo === "ADMINISTRADOR";
 
+
+  const totalInsumos = insumos.length;
+
+  const totalAlimentos = insumos.filter(
+    (insumo) => insumo.categoria === "ALIMENTO"
+  ).length;
+
+  const totalMedicamentos = insumos.filter(
+    (insumo) => insumo.categoria === "MEDICAMENTO"
+  ).length;
+
+  const totalAlertas = alertas.length;
+
+
   // ============================
   // CONSULTAR INVENTARIO
   // ============================
@@ -476,6 +490,65 @@ function InsumosPage({ cuenta }) {
           </Button>
         )}
       </Box>
+
+
+      {/* RESUMEN DEL INVENTARIO */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(2, 1fr)",
+            md: esAdministrador
+              ? "repeat(4, 1fr)"
+              : "repeat(3, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Paper sx={{ p: 2, borderRadius: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Total de insumos
+          </Typography>
+          <Typography variant="h4" fontWeight="bold">
+            {totalInsumos}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2, borderRadius: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Alimentos
+          </Typography>
+          <Typography variant="h4" fontWeight="bold">
+            {totalAlimentos}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2, borderRadius: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Medicamentos
+          </Typography>
+          <Typography variant="h4" fontWeight="bold">
+            {totalMedicamentos}
+          </Typography>
+        </Paper>
+
+        {esAdministrador && (
+          <Paper sx={{ p: 2, borderRadius: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              Alertas activas
+            </Typography>
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+              color={totalAlertas > 0 ? "error.main" : "success.main"}
+            >
+              {totalAlertas}
+            </Typography>
+          </Paper>
+        )}
+      </Box>
+
 
       {/* MENSAJES DEL SISTEMA */}
       {error && (
