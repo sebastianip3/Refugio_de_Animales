@@ -1,0 +1,1 @@
+export { autorizar as permitirCuenta } from './auth.middleware.js';
