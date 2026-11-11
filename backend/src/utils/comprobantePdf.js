@@ -44,7 +44,7 @@ export function generarComprobantePdf(inscripcion) {
     campo(doc, 'Fecha y hora', formatearFecha(jornada.fecha));
     campo(doc, 'Lugar', jornada.lugar);
     campo(doc, 'Comuna', jornada.comuna);
-    if (jornada.sector) campo(doc, 'Sector', jornada.sector);
+    campo(doc, 'Sector', jornada.sector);
 
     seccion(doc, 'Datos del tutor');
     campo(doc, 'Nombre', `${inscripcion.tutorNombre} ${inscripcion.tutorApellido}`);
