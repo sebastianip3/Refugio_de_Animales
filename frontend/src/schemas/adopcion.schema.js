@@ -43,6 +43,11 @@ const rutSchema = z
   .refine(
     rutValido,
     "Dígito verificador del RUT inválido"
+  )
+  // RUT de prueba como 11.111.111-1 cumplen el dígito verificador, pero no son reales
+  .refine(
+    (valor) => !/^(\d)\1+-/.test(valor),
+    "Ingrese un RUT válido"
   );
 
 export const adopcionFormSchema = z.object({
@@ -61,13 +66,22 @@ export const adopcionFormSchema = z.object({
   email: z
     .string()
     .trim()
+    .toLowerCase()
+    .max(254, "El correo es demasiado largo")
     .email("Ingrese un correo electrónico válido"),
 
+  // Teléfono chileno de 9 dígitos, con o sin +56 (igual que en el backend)
   telefono: z
     .string()
     .trim()
-    .min(8, "El teléfono debe tener al menos 8 caracteres")
-    .max(15, "El teléfono no puede superar los 15 caracteres"),
+    .transform((valor) =>
+      valor.replace(/[\s\-().]/g, "").replace(/^(\+?56)/, "")
+    )
+    .refine(
+      (valor) => /^[2-9]\d{8}$/.test(valor),
+      "Ingrese un teléfono de 9 dígitos, por ejemplo 9 1234 5678"
+    )
+    .transform((valor) => `+56${valor}`),
 
   direccion: z
     .string()

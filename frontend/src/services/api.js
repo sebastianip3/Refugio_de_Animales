@@ -39,6 +39,17 @@ export const animalesApi = {
   eliminar: (id) => request(`/animales/${id}`, { method: "DELETE" }),
 };
 
+// Solo el veterinario (o un administrador) puede crear y editar registros
+export const registrosClinicosApi = {
+  crear: (animalId, registro) =>
+    request(`/animales/${animalId}/historial`, { method: "POST", body: JSON.stringify(registro) }),
+  actualizar: (animalId, registroId, cambios) =>
+    request(`/animales/${animalId}/historial/${registroId}`, {
+      method: "PATCH",
+      body: JSON.stringify(cambios),
+    }),
+};
+
 export const especiesApi = {
   listar: () => request("/especies"),
 };
