@@ -50,11 +50,6 @@ function App() {
   // JavaScript no puede leer la cookie httpOnly, así que al cargar se pregunta
   // al backend si hay una sesión abierta (si no la hay, responde 401)
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      setCargandoSesion(false);
-      return;
-    }
-
     cuentasApi
       .perfil()
       .then(setCuenta)

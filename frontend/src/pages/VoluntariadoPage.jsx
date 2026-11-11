@@ -20,8 +20,8 @@ function formatearFecha(fecha) {
   return new Date(fecha).toLocaleString();
 }
 
-function VoluntariadoPage({ cuenta }) {
-  const puedeAdministrar = cuenta?.tipo === "ADMINISTRADOR" || import.meta.env.DEV;
+function VoluntariadoPage({ cuenta, onIniciarSesion }) {
+  const puedeAdministrar = cuenta?.tipo === "ADMINISTRADOR";
   const [voluntarios, setVoluntarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -43,13 +43,22 @@ function VoluntariadoPage({ cuenta }) {
   }, []);
 
   useEffect(() => {
-    if (cuenta || import.meta.env.DEV) cargarVoluntarios();
+    if (cuenta) cargarVoluntarios();
   }, [cuenta, cargarVoluntarios]);
 
-  if (!cuenta && !import.meta.env.DEV) {
+  if (!cuenta) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 px-4 py-10 sm:px-8">
-        <p className="mx-auto max-w-6xl text-slate-600">Inicia sesión para consultar los voluntarios.</p>
+        <div className="mx-auto max-w-6xl text-center">
+          <p className="text-slate-600">Inicia sesión para consultar los voluntarios.</p>
+          <button
+            type="button"
+            onClick={onIniciarSesion}
+            className="mt-4 rounded-xl bg-sky-600 px-5 py-3 font-semibold text-white hover:bg-sky-700"
+          >
+            Iniciar sesión
+          </button>
+        </div>
       </main>
     );
   }
@@ -110,11 +119,6 @@ function VoluntariadoPage({ cuenta }) {
           <p className="mx-auto mt-3 max-w-2xl text-slate-600">
             Consulta y administra las cuentas de las personas voluntarias del refugio.
           </p>
-          {import.meta.env.DEV && (
-            <p className="mx-auto mt-3 inline-flex rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800 ring-1 ring-amber-200">
-              Modo de prueba local: no se requiere iniciar sesión
-            </p>
-          )}
         </header>
 
         {error && (

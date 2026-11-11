@@ -9,9 +9,8 @@ import {
   crearVoluntario,
   eliminarVoluntario,
 } from '../controllers/cuenta.controller.js';
-import { autenticar } from '../middleware/auth.middleware.js';
+import { autenticar, autorizar } from '../middleware/auth.middleware.js';
 import { NODE_ENV } from '../config/configEnv.js';
-import { autorizar } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -38,18 +37,13 @@ function autenticarVoluntariado(req, res, next) {
   return autenticar(req, res, next);
 }
 
-function autorizarGestionVoluntarios(req, res, next) {
-  if (esSolicitudLocalDesarrollo(req)) return next();
-  return autorizar('ADMINISTRADOR')(req, res, next);
-}
-
 router.post('/login', iniciarSesion);
 router.post('/logout', cerrarSesion);
 router.get('/perfil', autenticar, obtenerPerfil);
 router.patch('/correo', autenticar, cambiarCorreo);
 router.patch('/disponibilidad-cuidado', autenticar, cambiarDisponibilidadCuidado);
 router.get('/voluntarios', autenticarVoluntariado, listarVoluntarios);
-router.post('/voluntarios', autenticarVoluntariado, crearVoluntario);
-router.delete('/:id', autenticarVoluntariado, autorizarGestionVoluntarios, eliminarVoluntario);
+router.post('/voluntarios', autenticar, autorizar('ADMINISTRADOR'), crearVoluntario);
+router.delete('/:id', autenticar, autorizar('ADMINISTRADOR'), eliminarVoluntario);
 
 export default router;
