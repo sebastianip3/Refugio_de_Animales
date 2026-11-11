@@ -4,6 +4,26 @@ import prisma from '../src/config/prisma.js';
 // Cuentas del personal para entrar en desarrollo.
 // Cada contraseña se lee de backend/.env (variableContrasena) para no dejarla en el repositorio
 const cuentasPersonal = [
+
+  {
+    variableContrasena: 'ADMIN_CONTRASENA',
+    datos: {
+      nombre: 'Administrador',
+      apellido: 'Refugio',
+      tipo: 'ADMINISTRADOR',
+      correo: 'admin.local@refugio.test',
+    },
+  },
+  {
+    variableContrasena: 'TRABAJADOR_CONTRASENA',
+    datos: {
+      nombre: 'Trabajador',
+      apellido: 'Refugio',
+      tipo: 'TRABAJADOR',
+      correo: 'trabajador.local@refugio.test',
+    },
+  },
+
   {
     variableContrasena: 'ENCARGADO_CONTRASENA',
     datos: {
@@ -104,11 +124,21 @@ async function main() {
       console.log(`=> cuenta ${datos.correo} omitida: falta ${variableContrasena} en backend/.env`);
       continue;
     }
+
+    const contrasenaHash = await bcrypt.hash(contrasena, 10);
+
+    const actualizarContrasena =
+      process.env.NODE_ENV !== 'production' &&
+      process.env.RESETEAR_CLAVES_SEED === 'true';
+
     await prisma.cuenta.upsert({
       where: { correo: datos.correo },
-      update: {},
-      create: { ...datos, contrasenaHash: await bcrypt.hash(contrasena, 10) },
+      update: actualizarContrasena
+        ? { contrasenaHash }
+        : {},
+      create: { ...datos, contrasenaHash },
     });
+
     console.log(`=> cuenta de ${datos.tipo}: ${datos.correo}`);
   }
 
