@@ -1,31 +1,13 @@
 
 import { useCallback, useEffect, useState } from "react";
-
 import {
-  Box,
-  Typography,
-  Paper,
-  Chip,
-  Alert,
-  CircularProgress,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
+  Alert, Box, Button, Chip, CircularProgress, Dialog,
+  DialogActions, DialogContent, DialogTitle, MenuItem,
+  Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
-
 import { insumosApi } from "../services/api.js";
 
-// Valores iniciales del formulario
 const formularioInicial = {
   nombre: "",
   categoria: "ALIMENTO",
@@ -35,25 +17,50 @@ const formularioInicial = {
   stockMinimo: "0",
 };
 
+const tiposMovimiento = {
+  INGRESO: "Ingreso",
+  RETIRO: "Retiro",
+  CONSUMO: "Consumo",
+};
+
+// Validar cantidades de hasta dos decimales
+function cantidadValida(valor, permiteCero = true) {
+  const texto = String(valor).trim();
+  const numero = Number(texto);
+
+  return (
+    /^\d+(?:\.\d{1,2})?$/.test(texto) &&
+    Number.isFinite(numero) &&
+    numero <= 9999999999 &&
+    (permiteCero ? numero >= 0 : numero > 0)
+  );
+}
+
 function InsumosPage({ cuenta }) {
   // Estados del inventario
   const [insumos, setInsumos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-
-  // Estados del formulario
-  const [formularioAbierto, setFormularioAbierto] = useState(false);
-  const [nuevoInsumo, setNuevoInsumo] = useState({
-    ...formularioInicial,
-  });
-  const [guardando, setGuardando] = useState(false);
-  const [errorFormulario, setErrorFormulario] = useState("");
   const [mensajeExito, setMensajeExito] = useState("");
 
-  // Verificar si el usuario es administrador
+  // Estados del formulario para crear insumos
+  const [formularioAbierto, setFormularioAbierto] = useState(false);
+  const [nuevoInsumo, setNuevoInsumo] = useState({ ...formularioInicial });
+  const [guardando, setGuardando] = useState(false);
+  const [errorFormulario, setErrorFormulario] = useState("");
+
+  // Estados del formulario de movimientos
+  const [movimientoAbierto, setMovimientoAbierto] = useState(false);
+  const [insumoSeleccionado, setInsumoSeleccionado] = useState(null);
+  const [tipoMovimiento, setTipoMovimiento] = useState("INGRESO");
+  const [cantidadMovimiento, setCantidadMovimiento] = useState("1");
+  const [observacion, setObservacion] = useState("");
+  const [guardandoMovimiento, setGuardandoMovimiento] = useState(false);
+  const [errorMovimiento, setErrorMovimiento] = useState("");
+
   const esAdministrador = cuenta?.tipo === "ADMINISTRADOR";
 
-  // Obtener inventario desde PostgreSQL
+  // Consultar insumos desde PostgreSQL
   const cargarInsumos = useCallback(async () => {
     try {
       setCargando(true);
@@ -68,48 +75,25 @@ function InsumosPage({ cuenta }) {
     }
   }, []);
 
-  // Cargar los insumos al entrar a la página
   useEffect(() => {
     cargarInsumos();
   }, [cargarInsumos]);
 
-  // Determinar el estado del stock
-  const obtenerEstado = (insumo) => {
-    const actual = Number(insumo.stockActual);
-    const minimo = Number(insumo.stockMinimo);
+  // Determinar si un producto tiene stock bajo
+  const obtenerEstado = (insumo) =>
+    Number(insumo.stockActual) <= Number(insumo.stockMinimo)
+      ? { texto: "Stock bajo", color: "error" }
+      : { texto: "Disponible", color: "success" };
 
-    if (actual <= minimo) {
-      return {
-        texto: "Stock bajo",
-        color: "error",
-      };
-    }
-
-    return {
-      texto: "Disponible",
-      color: "success",
-    };
-  };
-
-  // Abrir formulario
+  // Abrir formulario de nuevo insumo
   const abrirFormulario = () => {
     if (!esAdministrador) return;
 
     setNuevoInsumo({ ...formularioInicial });
     setErrorFormulario("");
-    setMensajeExito("");
     setFormularioAbierto(true);
   };
 
-  // Cerrar formulario
-  const cerrarFormulario = () => {
-    if (guardando) return;
-
-    setFormularioAbierto(false);
-    setErrorFormulario("");
-  };
-
-  // Actualizar campos del formulario
   const actualizarCampo = (campo, valor) => {
     setNuevoInsumo((anterior) => ({
       ...anterior,
@@ -117,28 +101,18 @@ function InsumosPage({ cuenta }) {
     }));
   };
 
-  // Registrar nuevo insumo
+  // Registrar un nuevo insumo
   const guardarInsumo = async () => {
     if (!esAdministrador || guardando) return;
 
-    const stockActual = Number(nuevoInsumo.stockActual);
-    const stockMinimo = Number(nuevoInsumo.stockMinimo);
-
-    // Validaciones del formulario
     if (
       !nuevoInsumo.nombre.trim() ||
       !nuevoInsumo.unidadMedida.trim() ||
-      nuevoInsumo.stockActual === "" ||
-      nuevoInsumo.stockMinimo === "" ||
-      !Number.isFinite(stockActual) ||
-      !Number.isFinite(stockMinimo) ||
-      stockActual < 0 ||
-      stockMinimo < 0 ||
-      !Number.isInteger(stockActual * 100) ||
-      !Number.isInteger(stockMinimo * 100)
+      !cantidadValida(nuevoInsumo.stockActual) ||
+      !cantidadValida(nuevoInsumo.stockMinimo)
     ) {
       setErrorFormulario(
-        "Completa correctamente los campos. Las cantidades deben ser positivas o cero y tener como máximo dos decimales."
+        "Completa los campos obligatorios. Las cantidades deben ser mayores o iguales a cero y tener hasta dos decimales."
       );
       return;
     }
@@ -146,31 +120,92 @@ function InsumosPage({ cuenta }) {
     try {
       setGuardando(true);
       setErrorFormulario("");
-      setMensajeExito("");
 
       await insumosApi.crear({
         nombre: nuevoInsumo.nombre.trim(),
         categoria: nuevoInsumo.categoria,
         descripcion: nuevoInsumo.descripcion.trim(),
         unidadMedida: nuevoInsumo.unidadMedida.trim(),
-        stockActual,
-        stockMinimo,
+        stockActual: Number(nuevoInsumo.stockActual),
+        stockMinimo: Number(nuevoInsumo.stockMinimo),
       });
 
-      // Cerrar y limpiar formulario
       setFormularioAbierto(false);
       setNuevoInsumo({ ...formularioInicial });
-
-      // Actualizar inventario
-      await cargarInsumos();
-
       setMensajeExito("Insumo registrado correctamente.");
+
+      await cargarInsumos();
     } catch (err) {
       setErrorFormulario(
         err.message || "No se pudo registrar el insumo."
       );
     } finally {
       setGuardando(false);
+    }
+  };
+
+  // Abrir formulario de ingreso, retiro o consumo
+  const abrirMovimiento = (insumo, tipo) => {
+    if (!esAdministrador) return;
+
+    setInsumoSeleccionado(insumo);
+    setTipoMovimiento(tipo);
+    setCantidadMovimiento("1");
+    setObservacion("");
+    setErrorMovimiento("");
+    setMovimientoAbierto(true);
+  };
+
+  // Registrar movimiento en PostgreSQL
+  const guardarMovimiento = async () => {
+    if (!esAdministrador || !insumoSeleccionado || guardandoMovimiento) {
+      return;
+    }
+
+    if (!cantidadValida(cantidadMovimiento, false)) {
+      setErrorMovimiento(
+        "La cantidad debe ser mayor que cero y tener como máximo dos decimales."
+      );
+      return;
+    }
+
+    const cantidad = Number(cantidadMovimiento);
+
+    // Impedir retiros o consumos superiores al stock
+    if (
+      tipoMovimiento !== "INGRESO" &&
+      cantidad > Number(insumoSeleccionado.stockActual)
+    ) {
+      setErrorMovimiento(
+        "No puedes retirar o consumir más de la cantidad disponible."
+      );
+      return;
+    }
+
+    try {
+      setGuardandoMovimiento(true);
+      setErrorMovimiento("");
+
+      await insumosApi.registrarMovimiento(insumoSeleccionado.id, {
+        tipo: tipoMovimiento,
+        cantidad,
+        observacion: observacion.trim(),
+      });
+
+      setMovimientoAbierto(false);
+      setInsumoSeleccionado(null);
+
+      setMensajeExito(
+        `${tiposMovimiento[tipoMovimiento]} registrado correctamente.`
+      );
+
+      await cargarInsumos();
+    } catch (err) {
+      setErrorMovimiento(
+        err.message || "No se pudo registrar el movimiento."
+      );
+    } finally {
+      setGuardandoMovimiento(false);
     }
   };
 
@@ -182,38 +217,34 @@ function InsumosPage({ cuenta }) {
       </Typography>
 
       <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Inventario de alimentos, medicamentos y otros insumos
-        del refugio.
+        Inventario de alimentos, medicamentos y otros insumos del refugio.
       </Typography>
 
-      {/* ROL DEL USUARIO */}
-      <Box sx={{ mb: 3 }}>
+      {/* ROL Y BOTÓN DE REGISTRO */}
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
         <Chip
-          label={
-            esAdministrador
-              ? "Administrador"
-              : "Solo consulta"
-          }
+          label={esAdministrador ? "Administrador" : "Solo consulta"}
           color={esAdministrador ? "primary" : "default"}
         />
-      </Box>
 
-      {/* BOTÓN PARA ADMINISTRADORES */}
-      {esAdministrador && (
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="contained"
-            onClick={abrirFormulario}
-          >
+        {esAdministrador && (
+          <Button variant="contained" onClick={abrirFormulario}>
             + Nuevo insumo
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
 
       {/* MENSAJES */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          Error al cargar inventario: {error}
+          {error}
         </Alert>
       )}
 
@@ -266,13 +297,19 @@ function InsumosPage({ cuenta }) {
                   <TableCell>Cantidad</TableCell>
                   <TableCell>Unidad</TableCell>
                   <TableCell>Estado</TableCell>
+                  {esAdministrador && (
+                    <TableCell>Movimientos</TableCell>
+                  )}
                 </TableRow>
               </TableHead>
 
               <TableBody>
                 {insumos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell
+                      colSpan={esAdministrador ? 6 : 5}
+                      align="center"
+                    >
                       No hay insumos registrados.
                     </TableCell>
                   </TableRow>
@@ -282,21 +319,10 @@ function InsumosPage({ cuenta }) {
 
                     return (
                       <TableRow key={insumo.id}>
-                        <TableCell>
-                          {insumo.nombre}
-                        </TableCell>
-
-                        <TableCell>
-                          {insumo.categoria}
-                        </TableCell>
-
-                        <TableCell>
-                          {insumo.stockActual}
-                        </TableCell>
-
-                        <TableCell>
-                          {insumo.unidadMedida}
-                        </TableCell>
+                        <TableCell>{insumo.nombre}</TableCell>
+                        <TableCell>{insumo.categoria}</TableCell>
+                        <TableCell>{insumo.stockActual}</TableCell>
+                        <TableCell>{insumo.unidadMedida}</TableCell>
 
                         <TableCell>
                           <Chip
@@ -305,6 +331,51 @@ function InsumosPage({ cuenta }) {
                             size="small"
                           />
                         </TableCell>
+
+                        {/* Solo los administradores modifican */}
+                        {esAdministrador && (
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                gap: 1,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() =>
+                                  abrirMovimiento(insumo, "INGRESO")
+                                }
+                              >
+                                Ingresar
+                              </Button>
+
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                                onClick={() =>
+                                  abrirMovimiento(insumo, "RETIRO")
+                                }
+                              >
+                                Retirar
+                              </Button>
+
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() =>
+                                  abrirMovimiento(insumo, "CONSUMO")
+                                }
+                              >
+                                Consumir
+                              </Button>
+                            </Box>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })
@@ -315,16 +386,14 @@ function InsumosPage({ cuenta }) {
         )}
       </Paper>
 
-      {/* FORMULARIO DE REGISTRO */}
+      {/* FORMULARIO DE REGISTRO DE INSUMOS */}
       <Dialog
         open={formularioAbierto}
-        onClose={cerrarFormulario}
+        onClose={() => !guardando && setFormularioAbierto(false)}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>
-          Registrar nuevo insumo
-        </DialogTitle>
+        <DialogTitle>Registrar nuevo insumo</DialogTitle>
 
         <DialogContent>
           {errorFormulario && (
@@ -335,8 +404,8 @@ function InsumosPage({ cuenta }) {
 
           <TextField
             label="Nombre del insumo"
-            fullWidth
             required
+            fullWidth
             margin="dense"
             value={nuevoInsumo.nombre}
             onChange={(e) =>
@@ -348,22 +417,15 @@ function InsumosPage({ cuenta }) {
             select
             label="Categoría"
             fullWidth
-            required
             margin="dense"
             value={nuevoInsumo.categoria}
             onChange={(e) =>
               actualizarCampo("categoria", e.target.value)
             }
           >
-            <MenuItem value="ALIMENTO">
-              Alimento
-            </MenuItem>
-            <MenuItem value="MEDICAMENTO">
-              Medicamento
-            </MenuItem>
-            <MenuItem value="OTRO">
-              Otro
-            </MenuItem>
+            <MenuItem value="ALIMENTO">Alimento</MenuItem>
+            <MenuItem value="MEDICAMENTO">Medicamento</MenuItem>
+            <MenuItem value="OTRO">Otro</MenuItem>
           </TextField>
 
           <TextField
@@ -380,8 +442,8 @@ function InsumosPage({ cuenta }) {
 
           <TextField
             label="Unidad de medida"
-            fullWidth
             required
+            fullWidth
             margin="dense"
             helperText="Ejemplo: kg, litros, unidades"
             value={nuevoInsumo.unidadMedida}
@@ -393,14 +455,11 @@ function InsumosPage({ cuenta }) {
           <TextField
             label="Cantidad inicial"
             type="number"
-            fullWidth
             required
+            fullWidth
             margin="dense"
             slotProps={{
-              htmlInput: {
-                min: 0,
-                step: 0.01,
-              },
+              htmlInput: { min: 0, step: 0.01 },
             }}
             value={nuevoInsumo.stockActual}
             onChange={(e) =>
@@ -411,15 +470,11 @@ function InsumosPage({ cuenta }) {
           <TextField
             label="Stock mínimo"
             type="number"
-            fullWidth
             required
+            fullWidth
             margin="dense"
-            helperText="Cantidad a partir de la cual se considera stock bajo"
             slotProps={{
-              htmlInput: {
-                min: 0,
-                step: 0.01,
-              },
+              htmlInput: { min: 0, step: 0.01 },
             }}
             value={nuevoInsumo.stockMinimo}
             onChange={(e) =>
@@ -430,20 +485,94 @@ function InsumosPage({ cuenta }) {
 
         <DialogActions sx={{ p: 2 }}>
           <Button
-            onClick={cerrarFormulario}
             disabled={guardando}
+            onClick={() => setFormularioAbierto(false)}
           >
             Cancelar
           </Button>
 
           <Button
             variant="contained"
-            onClick={guardarInsumo}
             disabled={guardando}
+            onClick={guardarInsumo}
           >
-            {guardando
+            {guardando ? "Guardando..." : "Registrar insumo"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* FORMULARIO DE MOVIMIENTOS */}
+      <Dialog
+        open={movimientoAbierto}
+        onClose={() =>
+          !guardandoMovimiento && setMovimientoAbierto(false)
+        }
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {tiposMovimiento[tipoMovimiento]} de insumo
+        </DialogTitle>
+
+        <DialogContent>
+          {insumoSeleccionado && (
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              {insumoSeleccionado.nombre} — Disponible:{" "}
+              {insumoSeleccionado.stockActual}{" "}
+              {insumoSeleccionado.unidadMedida}
+            </Typography>
+          )}
+
+          {errorMovimiento && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errorMovimiento}
+            </Alert>
+          )}
+
+          <TextField
+            label="Cantidad"
+            type="number"
+            required
+            fullWidth
+            margin="dense"
+            value={cantidadMovimiento}
+            onChange={(e) =>
+              setCantidadMovimiento(e.target.value)
+            }
+            slotProps={{
+              htmlInput: { min: 0.01, step: 0.01 },
+            }}
+          />
+
+          <TextField
+            label="Observación (opcional)"
+            fullWidth
+            multiline
+            rows={2}
+            margin="dense"
+            value={observacion}
+            onChange={(e) =>
+              setObservacion(e.target.value)
+            }
+          />
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            disabled={guardandoMovimiento}
+            onClick={() => setMovimientoAbierto(false)}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={guardandoMovimiento}
+            onClick={guardarMovimiento}
+          >
+            {guardandoMovimiento
               ? "Guardando..."
-              : "Registrar insumo"}
+              : `Confirmar ${tiposMovimiento[tipoMovimiento].toLowerCase()}`}
           </Button>
         </DialogActions>
       </Dialog>

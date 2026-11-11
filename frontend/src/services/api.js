@@ -102,6 +102,7 @@ reenviarComprobante: (id) =>
 };
 
 
+
 export const insumosApi = {
   listar: () => request("/insumos"),
 
@@ -110,4 +111,11 @@ export const insumosApi = {
       method: "POST",
       body: JSON.stringify(insumo),
     }),
+
+  registrarMovimiento: (id, movimiento) =>
+    request(`/insumos/${id}/movimientos`, {
+      method: "POST",
+      body: JSON.stringify(movimiento),
+    }),
 };
+
