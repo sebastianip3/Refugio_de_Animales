@@ -6,7 +6,7 @@ import esterilizacionRoutes from './esterilizacion.routes.js';
 import cuentaRoutes from './cuenta.routes.js';
 import cuidadoRoutes from './cuidado.routes.js';
 import insumoRoutes from './insumo.routes.js';
-import registroClinicoRoutes from './registroclinico.routes.js';
+import registroClinicoRoutes from './registroClinico.routes.js';
 const router = Router();
 
 router.use('/animales/:id/historial', registroClinicoRoutes);
