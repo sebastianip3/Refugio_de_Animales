@@ -4,13 +4,12 @@ import {
   consultarDisponibilidad,
   listarAnimalesConCuidadorVigente,
 } from '../controllers/cuidado.controller.js';
-import { autenticar } from '../middleware/auth.middleware.js';
-import { permitirCuenta } from '../middleware/rol.middleware.js';
+import { autenticar, autorizar } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
 router.get('/animales', listarAnimalesConCuidadorVigente);
 router.get('/disponibilidad', consultarDisponibilidad);
-router.post('/', autenticar, permitirCuenta('ADMINISTRADOR'), asignarCuidado);
+router.post('/', autenticar, autorizar('ADMINISTRADOR'), asignarCuidado);
 
 export default router;
