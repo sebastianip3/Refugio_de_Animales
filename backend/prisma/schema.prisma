@@ -42,6 +42,28 @@ enum EstadoAdopcion {
   CANCELADA
 }
 
+// Comunas donde el refugio acepta adopciones
+enum Comuna {
+  CONCEPCION
+  CORONEL
+  CHIGUAYANTE
+  FLORIDA
+  HUALQUI
+  LOTA
+  PENCO
+  SAN_PEDRO_DE_LA_PAZ
+  SANTA_JUANA
+  TALCAHUANO
+}
+
+enum TipoVivienda {
+  CASA_CON_PATIO
+  CASA_SIN_PATIO
+  CABANA
+  DEPARTAMENTO
+  CONDOMINIO
+}
+
 enum TamanoMascota {
   PEQUENO
   MEDIANO
@@ -203,8 +225,8 @@ model Adopcion {
   email          String
   telefono       String
   direccion      String
-  comuna         String
-  tipoVivienda   String?
+  comuna         Comuna
+  tipoVivienda   TipoVivienda?
   otrasMascotas  String?
   motivo         String?
   estado         EstadoAdopcion @default(PENDIENTE)
