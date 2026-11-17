@@ -5,6 +5,20 @@ export const ESTADOS_ADOPCION = ['PENDIENTE', 'EN_REVISION', 'APROBADA', 'RECHAZ
 // Una adopción en estos estados bloquea nuevas solicitudes para el mismo animal
 export const ESTADOS_EN_PROCESO = ['PENDIENTE', 'EN_REVISION'];
 
+// Comunas donde el refugio acepta adopciones
+export const COMUNAS = [
+  'Concepción',
+  'Coronel',
+  'Chiguayante',
+  'Florida',
+  'Hualqui',
+  'Lota',
+  'Penco',
+  'San Pedro de la Paz',
+  'Santa Juana',
+  'Talcahuano',
+];
+
 // Valida el dígito verificador (módulo 11) de un RUT normalizado "12345678-K"
 function rutValido(rut) {
   const [cuerpo, dv] = rut.split('-');
@@ -56,7 +70,7 @@ export const adopcionSchema = z.object({
   email: correoSchema,
   telefono: telefonoSchema,
   direccion: z.string().trim().min(3).max(255),
-  comuna: z.string().trim().min(2).max(100),
+  comuna: z.enum(COMUNAS, { error: 'Debe seleccionar una comuna válida' }),
   tipoVivienda: z.string().trim().max(100).nullish(),
   otrasMascotas: z.string().trim().nullish(),
   motivo: z.string().trim().nullish(),
