@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { adopcionesApi, animalesApi } from "../services/api.js";
-import { adopcionFormSchema } from "../schemas/adopcion.schema.js";
+import { adopcionFormSchema, COMUNAS } from "../schemas/adopcion.schema.js";
 import { puedeEvaluarAdopciones } from "../utils.js";
 
 const ACCIONES = {
@@ -66,7 +66,7 @@ function aPayload(formulario) {
     email: formulario.email.trim(),
     telefono: formulario.telefono.trim(),
     direccion: formulario.direccion.trim(),
-    comuna: formulario.comuna.trim(),
+    comuna: formulario.comuna,
     tipoVivienda: textoONull(formulario.tipoVivienda),
     otrasMascotas: textoONull(formulario.otrasMascotas),
     motivo: textoONull(formulario.motivo),
@@ -387,7 +387,15 @@ function AdopcionesPage({ cuenta }) {
               </Campo>
 
               <Campo id="comuna" label="Comuna" error={errors.comuna}>
-                <input type="text" id="comuna" className={claseCampo} {...register("comuna")} />
+                <select id="comuna" className={claseCampo} {...register("comuna")}>
+                  <option value="">Seleccione una comuna</option>
+
+                  {COMUNAS.map((comuna) => (
+                    <option key={comuna} value={comuna}>
+                      {comuna}
+                    </option>
+                  ))}
+                </select>
               </Campo>
 
               <Campo
