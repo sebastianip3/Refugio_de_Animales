@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { adopcionesApi, animalesApi } from "../services/api.js";
-import { adopcionFormSchema, COMUNAS } from "../schemas/adopcion.schema.js";
+import { adopcionFormSchema, COMUNAS, TIPOS_VIVIENDA } from "../schemas/adopcion.schema.js";
 import { puedeEvaluarAdopciones } from "../utils.js";
 
 const ACCIONES = {
@@ -390,9 +390,9 @@ function AdopcionesPage({ cuenta }) {
                 <select id="comuna" className={claseCampo} {...register("comuna")}>
                   <option value="">Seleccione una comuna</option>
 
-                  {COMUNAS.map((comuna) => (
-                    <option key={comuna} value={comuna}>
-                      {comuna}
+                  {Object.entries(COMUNAS).map(([valor, texto]) => (
+                    <option key={valor} value={valor}>
+                      {texto}
                     </option>
                   ))}
                 </select>
@@ -405,13 +405,15 @@ function AdopcionesPage({ cuenta }) {
                 error={errors.tipoVivienda}
                 className="md:col-span-2"
               >
-                <input
-                  type="text"
-                  id="tipoVivienda"
-                  placeholder="Casa con patio, departamento..."
-                  className={claseCampo}
-                  {...register("tipoVivienda")}
-                />
+                <select id="tipoVivienda" className={claseCampo} {...register("tipoVivienda")}>
+                  <option value="">Seleccione un tipo de vivienda</option>
+
+                  {Object.entries(TIPOS_VIVIENDA).map(([valor, texto]) => (
+                    <option key={valor} value={valor}>
+                      {texto}
+                    </option>
+                  ))}
+                </select>
               </Campo>
 
               <Campo id="otrasMascotas" label="Otras mascotas" opcional error={errors.otrasMascotas}>
@@ -514,7 +516,7 @@ function AdopcionesPage({ cuenta }) {
                           <p>{adopcion.email}</p>
                           <p className="text-xs text-slate-500">{adopcion.telefono}</p>
                         </td>
-                        <td className="px-3 py-3 text-slate-600">{adopcion.comuna}</td>
+                        <td className="px-3 py-3 text-slate-600">{COMUNAS[adopcion.comuna] ?? adopcion.comuna}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">
                           {new Date(adopcion.fechaSolicitud).toLocaleDateString("es-CL")}
                         </td>
@@ -589,7 +591,13 @@ function AdopcionesPage({ cuenta }) {
                   className={["otrasMascotas", "motivo"].includes(campo) ? "sm:col-span-2" : ""}
                 >
                   <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</dt>
-                  <dd className="mt-0.5 whitespace-pre-line text-slate-800">{fichaAbierta[campo] || "—"}</dd>
+                  <dd className="mt-0.5 whitespace-pre-line text-slate-800">
+                    {campo === "tipoVivienda"
+                      ? TIPOS_VIVIENDA[fichaAbierta.tipoVivienda] || "—"
+                      : campo === "comuna"
+                        ? COMUNAS[fichaAbierta.comuna] || "—"
+                        : fichaAbierta[campo] || "—"}
+                  </dd>
                 </div>
               ))}
             </dl>
