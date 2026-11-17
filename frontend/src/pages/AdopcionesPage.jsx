@@ -238,6 +238,10 @@ function AdopcionesPage({ cuenta }) {
   };
 
   const handleCambiarEstado = async (adopcion, estado) => {
+    if(estado === "RECHAZADA" && !observaciones.trim()) {
+        setErrorServidor("Debe escribir motivo rechazo");
+        return;
+      }
     if (!window.confirm(`¿Cambiar la adopción #${adopcion.id} a "${formatearEnum(estado)}"?`)) {
       return;
     }

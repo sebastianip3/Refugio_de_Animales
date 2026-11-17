@@ -68,4 +68,8 @@ export const updateAdopcionSchema = z
     estado: z.enum(ESTADOS_ADOPCION),
     observaciones: z.string().trim().nullish(),
   })
-  .partial();
+  .partial()
+  .refine(
+    (datos) => datos.estado !== 'RECHAZADA' || Boolean(datos.observaciones),
+    {message: 'Debe indicar el motivo del rechazo', path: ['observaciones'] }
+  );
