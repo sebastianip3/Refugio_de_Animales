@@ -1,5 +1,19 @@
 import { z } from "zod";
 
+// Comunas donde el refugio acepta adopciones (igual que en el backend)
+export const COMUNAS = [
+  "Concepción",
+  "Coronel",
+  "Chiguayante",
+  "Florida",
+  "Hualqui",
+  "Lota",
+  "Penco",
+  "San Pedro de la Paz",
+  "Santa Juana",
+  "Talcahuano",
+];
+
 function rutValido(rut) {
   const [cuerpo, dv] = rut.split("-");
 
@@ -89,11 +103,7 @@ export const adopcionFormSchema = z.object({
     .min(3, "La dirección debe tener al menos 3 caracteres")
     .max(255, "La dirección no puede superar los 255 caracteres"),
 
-  comuna: z
-    .string()
-    .trim()
-    .min(2, "La comuna debe tener al menos 2 caracteres")
-    .max(100, "La comuna no puede superar los 100 caracteres"),
+  comuna: z.enum(COMUNAS, { error: "Debe seleccionar una comuna" }),
 
   tipoVivienda: z
     .string()
