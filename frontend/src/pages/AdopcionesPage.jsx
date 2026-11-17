@@ -27,14 +27,14 @@ const ESTILO_ESTADO = {
   EN_REVISION: "bg-sky-100 text-sky-800 ring-sky-200",
   APROBADA: "bg-emerald-100 text-emerald-800 ring-emerald-200",
   RECHAZADA: "bg-rose-100 text-rose-800 ring-rose-200",
-  CANCELADA: "bg-slate-100 text-slate-700 ring-slate-200",
+  CANCELADA: "bg-violet-100 text-violet-800 ring-violet-200",
 };
 
 const ESTILO_ACCION = {
   EN_REVISION: "bg-sky-600 hover:bg-sky-700 text-white",
   APROBADA: "bg-emerald-600 hover:bg-emerald-700 text-white",
   RECHAZADA: "bg-rose-600 hover:bg-rose-700 text-white",
-  CANCELADA: "bg-white hover:bg-slate-50 text-slate-700 ring-1 ring-slate-300",
+  CANCELADA: "bg-violet-600 hover:bg-violet-700 text-white",
 };
 
 const FILTROS = ["TODAS", "PENDIENTE", "EN_REVISION", "APROBADA", "RECHAZADA", "CANCELADA"];
