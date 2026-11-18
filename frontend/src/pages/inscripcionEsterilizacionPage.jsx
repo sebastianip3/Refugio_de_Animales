@@ -48,10 +48,16 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
             Volver a las jornadas
           </button>  
             
+        <div className="mt-3 flex items-start justify-between gap-4">
+          <div>      
           <h2 className="mt-3 text-2xl font-semibold text-slate-800">{jornada.nombre}</h2>
           <p className="mt-1 text-slate-600">
            📅 {formatearFecha(jornada.fecha)} · 📍 {jornada.lugar}, {jornada.comuna}
           </p>
+          </div>
+
+          <img src="/refugioAnimales.jpg" alt="Refugio de Animales" className="w-24 shrink-0 rounded-lg object-contain" />
+        </div>
 
           {errorServidor && (
             <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-700">
@@ -210,12 +216,23 @@ function InscripcionEsterilizacionPage() {
                 <div className="flex flex-col gap-4">
                   {jornadas.map((jornada) => (
                     <article key={jornada.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                     <div className="flex items-start justify-between gap-4">
+                     <div>
                       <h2 className="text-xl font-semibold text-slate-800">{jornada.nombre}</h2>
                       <p className="mt-2 text-slate-600">📅 {formatearFecha(jornada.fecha)}</p>
                       <p className="mt-1 text-slate-600">
                        📍 {jornada.lugar}, {jornada.comuna}
                        {jornada.sector ? ` (${jornada.sector})` : ""}
                       </p>
+                      </div>
+
+                      <img
+                       src="/refugioAnimales.jpg"
+                       alt="Refugio de Animales"
+                       className="w-24 shrink-0 rounded-lg object-contain"
+                       />  
+                      </div>
+
                       <p className="mt-1 font-medium text-slate-700">
                         Cupos disponibles: {jornada.cuposDisponibles}
                       </p>
