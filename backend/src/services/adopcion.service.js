@@ -2,9 +2,13 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 import { ESTADOS_EN_PROCESO } from '../schema/adopcion.schema.js';
+import { enviarResultadoAdopcion } from './correo.service.js';
 
 // Serializable evita que dos solicitudes simultáneas pasen la verificación a la vez
 const TX_OPCIONES = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
+
+// Al pasar a estos estados se avisa al adoptante por correo
+const ESTADOS_NOTIFICADOS = ['APROBADA', 'RECHAZADA'];
 
 // Una adopción en estos estados impide que el mismo adoptante haga otra solicitud
 const ESTADOS_BLOQUEAN_ADOPTANTE = [...ESTADOS_EN_PROCESO, 'APROBADA'];
@@ -67,8 +71,11 @@ export function crearAdopcion(data) {
 
 // Solo se puede cambiar el estado mientras la adopción está en proceso.
 // Al aprobarla, el animal pasa a ADOPTADO y se registra su egreso.
-export function actualizarAdopcion(id, data) {
-  return prisma.$transaction(async (tx) => {
+// Si se aprueba o rechaza, se avisa al adoptante por correo después de guardar.
+export async function actualizarAdopcion(id, data) {
+  let cambioEstado = false;
+
+  const adopcion = await prisma.$transaction(async (tx) => {
     const actual = await tx.adopcion.findUnique({ where: { id } });
     if (!actual) throw new AppError(404, 'Adopción no encontrada');
 
@@ -76,6 +83,7 @@ export function actualizarAdopcion(id, data) {
       if (!ESTADOS_EN_PROCESO.includes(actual.estado)) {
         throw new AppError(409, `La adopción ya está cerrada (${actual.estado}) y no puede cambiar de estado`);
       }
+      cambioEstado = true;
 
       if (data.estado === 'APROBADA') {
         await tx.animal.update({
@@ -87,4 +95,15 @@ export function actualizarAdopcion(id, data) {
 
     return tx.adopcion.update({ where: { id }, data, include: { animal: true } });
   }, TX_OPCIONES);
+
+  if (!cambioEstado || !ESTADOS_NOTIFICADOS.includes(adopcion.estado)) return adopcion;
+
+  // Si el correo falla, el cambio de estado igual queda guardado; el encargado ve el aviso
+  try {
+    await enviarResultadoAdopcion(adopcion);
+    return { ...adopcion, correoEnviado: true };
+  } catch (error) {
+    console.error('No se pudo enviar el correo de la adopción:', error.message);
+    return { ...adopcion, correoEnviado: false };
+  }
 }
