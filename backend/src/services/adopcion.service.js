@@ -6,7 +6,10 @@ import { ESTADOS_EN_PROCESO } from '../schema/adopcion.schema.js';
 // Serializable evita que dos solicitudes simultáneas pasen la verificación a la vez
 const TX_OPCIONES = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
 
-const INCLUDE_ANIMAL = { animal: { include: { especie: true } } };
+// Una adopción en estos estados impide que el mismo adoptante haga otra solicitud
+const ESTADOS_BLOQUEAN_ADOPTANTE = [...ESTADOS_EN_PROCESO, 'APROBADA'];
+
+const INCLUDE_ANIMAL ={ animal: { include: { especie: true } } };
 
 // filtros: { animalId?, estado? }, ya validados por el controller
 export function listarAdopciones(filtros = {}) {
@@ -44,6 +47,19 @@ export function crearAdopcion(data) {
       where: { animalId: data.animalId, estado: { in: ESTADOS_EN_PROCESO } },
     });
     if (enProceso) throw new AppError(409, 'El animal ya tiene una adopción en proceso');
+
+    // Cada adoptante (RUT) puede tener solo una adopción; si fue rechazada o cancelada puede volver a postular
+    const adopcionDelAdoptante = await tx.adopcion.findFirst({
+      where: { rut: data.rut, estado: { in: ESTADOS_BLOQUEAN_ADOPTANTE } },
+    });
+    if (adopcionDelAdoptante) {
+      throw new AppError(
+        409,
+        adopcionDelAdoptante.estado === 'APROBADA'
+          ? 'Este adoptante ya realizó una adopción y no puede adoptar otro animal'
+          : 'Este adoptante ya tiene una solicitud de adopción en proceso'
+      );
+    }
 
     return tx.adopcion.create({ data, include: { animal: true } });
   }, TX_OPCIONES);
