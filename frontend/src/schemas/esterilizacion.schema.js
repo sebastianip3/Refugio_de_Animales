@@ -1,3 +1,4 @@
+import { COMUNAS } from "./adopcion.schema.js";
 import { z } from "zod";
 
 function rutValido(rut) {
@@ -46,9 +47,9 @@ const rutSchema = z
     .min(1, "Debe ingresar fecha")
     .refine((valor) => new Date(valor) > new Date(), "La fecha debe ser futura")
     .transform((valor) => new Date(valor).toISOString()),
-    lugar: z.string().trim().min(3, "Minimo 3 caracteres").max(255, "Maximo 255 caracteres"),
-    comuna: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
-    sector: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
+    lugar: z.string().min(1, "Debe seleccionar un lugar"),
+    comuna: z.enum(Object.values(COMUNAS), {error: "Debe seleccionar una comuna"}),
+    sector: z.string().min(1,"Debe seleccionar el sector"),
     cuposTotales: z.coerce.number({ error: "Ingrese número"}).int("Debe numero entero").min(1, "Debe haber al menos 1 cupos"),
     indicacionesPostOperatorias: z.string().trim().min(1, "Debe escribir las indicaciones"),
   });

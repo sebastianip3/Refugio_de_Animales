@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { esterilizacionApi } from "../services/api.js";
 import { jornadaFormSchema } from "../schemas/esterilizacion.schema.js";
+import { COMUNAS } from "../schemas/adopcion.schema.js";
+import { object } from "zod";
 
 const estiloInput =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none";
@@ -45,6 +47,49 @@ const aFechaLocal = (fecha) => {
   return d.toISOString().slice(0, 16);
 };
 
+const UBICACIONES = {
+  "Concepción": {
+    "Estadio Ester Roa": "Collao",
+    "Parque Ecuador": "Centro",
+  },
+  "Coronel": {
+    "Estadio Federico Schwager": "Schwager",
+    "Plaza Cristo Redentor": "Camilo Olavarria",
+  },
+  "Chiguayante": {
+    "Plaza de Chiguayante": "Centro",
+    "Parque Costanera Chiguayante": "Costanera",
+  },
+  "Florida": {
+    "Plaza de Arma de Florida": "Centro",
+    "Skatepark Florida": "El Quillay",
+  },
+  "Hualqui": {
+    "Plaza de Armas de Hualqui": "Centro",
+    "Parque los jardines": "Santa Josefina",
+  },
+  "Lota": {
+    "Parque Isidora Cousiño": "Lota Alto",
+    "Plaza de Lota": "Lota Bajo",
+  },
+  "Penco": {
+    "Plaza de Penco": "Centro",
+    "Plaza de Lirquén": "Lirquén",
+  },
+  "San Pedro de la Paz": {
+    "Parque Laguna Grande": "Laguna Grande",
+    "Parque Violeta Parra": "Villa Icalma",
+  },
+  "Santa Juana": {
+    "Plaza de Santa Juana": "Centro",
+    "Fuerte de Santa Juana de Guadalcázar": "Centro",
+  },
+  "Talcahuano": {
+    "Estadio El Morro": "El Morro",
+    "Plaza de Armas de Talcahuano": "Centro",
+  },
+};
+
 function Campo({ id, etiqueta, error, children }) {
   return (
     <div>
@@ -62,15 +107,21 @@ function FormularioJornada({ jornada, onGuardar, onCancelar }) {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(jornadaFormSchema),
     mode: "onTouched",
     defaultValues: jornada
-      ? { ...jornada, fecha: aFechaLocal(jornada.fecha), sector: jornada.sector ?? ""}
-      : { sector: "" },
+      ? { ...jornada, fecha: aFechaLocal(jornada.fecha)}
+      : { comuna: "", lugar: "", sector: "" },
   });
 
+  const comunaElegida = watch("comuna");
+  const lugarElegido = watch("lugar");
+  const lugaresComuna = UBICACIONES[comunaElegida] ?? {};
+  const sectorLugar = lugaresComuna[lugarElegido];
   return (
     <form
       onSubmit={handleSubmit(onGuardar)}
@@ -89,26 +140,33 @@ function FormularioJornada({ jornada, onGuardar, onCancelar }) {
         <input id="fecha" type="datetime-local" {...register("fecha")} className={estiloInput} />
       </Campo>
 
-      <Campo id="lugar" etiqueta="Lugar" error={errors.lugar}>
-        <input id="lugar" {...register("lugar")} className={estiloInput} />
+      <Campo id="comuna" etiqueta="Comuna" error={errors.comuna}>
+        <select id="comuna" {...register("comuna", {onChange: () => {
+          setValue("lugar", "");
+          setValue("sector", ""); }, })} 
+          className={estiloInput} >
+            <option value="">Seleccione una comuna</option>
+            {Object.values(COMUNAS).map((nombre) => (
+              <option key={nombre} value={nombre}>{nombre}</option>
+            ))}
+        </select>
       </Campo>
 
-      <Campo id="comuna" etiqueta="Comuna" error={errors.comuna}>
-        <select id="comuna" {...register("comuna")} className={estiloInput}>
-        <option value="">Seleccione una comuna</option>
-        <option value="Concepción">Concepción</option>
-        <option value="Coronel">Coronel</option>
-        <option value="Talcahuano">Talcahuano</option>
-        <option value="San_Pedro_De_La_Paz">San Pedro De La Paz</option>
-        <option value="Hualpén">Hualpén</option>
-        <option value="Chiguayante">Chiguayante</option>
-        <option value="Hualquí">Hualquí</option>
-        <option value="Lota">Lota</option>
+      <Campo id="lugar" etiqueta="Lugar" error={errors.lugar}>
+        <select id="lugar" disabled={!comunaElegida} {...register("lugar", {onChange: () =>
+          setValue("sector", "") })} className={estiloInput}>
+            <option value="">{comunaElegida ? "seleciona un lugar" : "Primero elija una Comuna"}</option>
+            {Object.keys(lugaresComuna).map((lugar) => (
+              <option key={lugar} value={lugar}>{lugar}</option>
+            ))}
         </select>
       </Campo>
 
       <Campo id="sector" etiqueta="Sector" error={errors.sector}>
-        <input id="sector" {...register("sector")} className={estiloInput} />
+        <select id="sector" disabled={!sectorLugar} {...register("sector")} className={estiloInput} >
+              <option value="">{sectorLugar ? "Seleccione el sector" : "Primero elija un lugar"}</option>
+              {sectorLugar && <option value={sectorLugar}>{sectorLugar}</option>}
+        </select>
       </Campo>
 
       <Campo id="cuposTotales" etiqueta="Cupos totales" error={errors.cuposTotales}>
