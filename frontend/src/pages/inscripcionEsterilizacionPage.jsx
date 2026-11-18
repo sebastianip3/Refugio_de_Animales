@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { esterilizacionApi, especiesApi } from "../services/api.js";
 import { inscripcionFormSchema } from "../schemas/esterilizacion.schema.js";
+import { COMUNAS } from "../schemas/adopcion.schema.js";
 
 const estiloInput = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none";
 const estiloBoton = "cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300";
@@ -116,7 +117,12 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
                 </Campo>
 
                 <Campo id="tutorComuna" etiqueta="Comuna" error={errors.tutorComuna}>
-                    <input id="tutorComuna" {...register("tutorComuna")} className={estiloInput} />
+                    <select id="tutorComuna" {...register("tutorComuna")} className={estiloInput} >
+                        <option value="">Seleccione su comuna</option>
+                        {Object.values(COMUNAS).map((nombre) => (
+                            <option key={nombre} value={nombre}>{nombre}</option>
+                        ))}
+                    </select>
                 </Campo>
 
                 <Campo id="tutorSector" etiqueta="Sector" error={errors.tutorSector}>

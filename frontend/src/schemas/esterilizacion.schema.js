@@ -36,7 +36,7 @@ const rutSchema = z
     tutorApellido: z.string().trim().min(2,"Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
     tutorRut: rutSchema,
     tutorEmail: z.string().trim().email("Correo invalido").max(150, "Maximo 150 caracteres"),
-    tutorComuna: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
+    tutorComuna: z.enum(Object.values(COMUNAS), {error: "Debe seleccionar su comuna"}),
     tutorSector: z.string().trim().min(2, "Minimo 2 caracteres").max(100, "Maximo 100 caracteres"),
   });
 
