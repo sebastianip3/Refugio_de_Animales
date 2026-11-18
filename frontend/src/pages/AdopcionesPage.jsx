@@ -250,14 +250,24 @@ function AdopcionesPage({ cuenta }) {
       setMensaje("");
       setErrorServidor("");
 
-      await adopcionesApi.actualizar(adopcion.id, {
+      const actualizada = await adopcionesApi.actualizar(adopcion.id, {
         estado,
         observaciones: observaciones.trim() || null,
       });
 
       setFichaAbierta(null);
 
+      // Recargar limpia los avisos, por eso se muestran después
       await cargarDatos();
+
+      // correoEnviado solo viene al aprobar o rechazar
+      if (actualizada?.correoEnviado === true) {
+        setMensaje(`Adopción #${adopcion.id} ${formatearEnum(estado)}. Se notificó al adoptante por correo.`);
+      } else if (actualizada?.correoEnviado === false) {
+        setErrorServidor(
+          `Adopción #${adopcion.id} ${formatearEnum(estado)}, pero no se pudo enviar el correo al adoptante (${adopcion.email}).`
+        );
+      }
     } catch (err) {
       setErrorServidor(`No se pudo actualizar: ${err.message}`);
     }
