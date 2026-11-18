@@ -91,7 +91,7 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
                 </Campo>
 
                 <Campo id="pesoEstimado" etiqueta="Peso Estimado (kg)" error={errors.pesoEstimado}>
-                    <input id="pesoEstimado" type="number" step="0.1" min="0.1" max="150"  
+                    <input id="pesoEstimado" type="number" step="0.5" min="0.5" max="150"  
                      onKeyDown={(e) => ["-", "+", "e", "E"].includes(e.key) && e.preventDefault()} {...register("pesoEstimado")} className={estiloInput} />
                 </Campo>
             </fieldset>

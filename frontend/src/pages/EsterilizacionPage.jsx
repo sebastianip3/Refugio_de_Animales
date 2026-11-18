@@ -14,6 +14,30 @@ const estiloBotonChico =
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" });
 
+// Texto que se muestra para cada valor que viene de la BD
+const ETIQUETA = {
+  CONFIRMADA: "Confirmada",
+  ASISTIO: "Asistió",
+  NO_ASISTIO: "No asistió",
+  CANCELADA: "Cancelada",
+  PENDIENTE: "Pendiente",
+  ENVIADO: "Enviado",
+  FALLIDO: "Fallido",
+  MACHO: "Macho",
+  HEMBRA: "Hembra",
+  PEQUENO: "Pequeño",
+  MEDIANO: "Mediano",
+  GRANDE: "Grande",
+};
+
+// Color de cada estado de inscripción
+const COLOR_ESTADO = {
+  CONFIRMADA: "bg-sky-100 text-sky-800",
+  ASISTIO: "bg-green-100 text-green-800",
+  NO_ASISTIO: "bg-yellow-100 text-yellow-800",
+  CANCELADA: "bg-red-100 text-red-700",
+};
+
 // El input datetime-local necesita "2026-12-01T10:00" en hora local
 const aFechaLocal = (fecha) => {
   const d = new Date(fecha);
@@ -43,7 +67,7 @@ function FormularioJornada({ jornada, onGuardar, onCancelar }) {
     resolver: zodResolver(jornadaFormSchema),
     mode: "onTouched",
     defaultValues: jornada
-      ? { ...jornada, fecha: aFechaLocal(jornada.fecha), sector: jornada.sector ?? "" }
+      ? { ...jornada, fecha: aFechaLocal(jornada.fecha), sector: jornada.sector ?? ""}
       : { sector: "" },
   });
 
@@ -70,7 +94,17 @@ function FormularioJornada({ jornada, onGuardar, onCancelar }) {
       </Campo>
 
       <Campo id="comuna" etiqueta="Comuna" error={errors.comuna}>
-        <input id="comuna" {...register("comuna")} className={estiloInput} />
+        <select id="comuna" {...register("comuna")} className={estiloInput}>
+        <option value="">Seleccione una comuna</option>
+        <option value="Concepción">Concepción</option>
+        <option value="Coronel">Coronel</option>
+        <option value="Talcahuano">Talcahuano</option>
+        <option value="San_Pedro_De_La_Paz">San Pedro De La Paz</option>
+        <option value="Hualpén">Hualpén</option>
+        <option value="Chiguayante">Chiguayante</option>
+        <option value="Hualquí">Hualquí</option>
+        <option value="Lota">Lota</option>
+        </select>
       </Campo>
 
       <Campo id="sector" etiqueta="Sector" error={errors.sector}>
@@ -191,7 +225,7 @@ function ListaInscritos({ jornada, onCerrar }) {
                     </span>
                   </td>
                   <td className="py-2 pr-4">
-                    {inscrito.especie?.nombre} · {inscrito.sexo.toLowerCase()} · {inscrito.tamano.toLowerCase()}
+                    {inscrito.especie?.nombre} · {ETIQUETA[inscrito.sexo]} · {ETIQUETA[inscrito.tamano]}
                     <br />
                     <span className="text-slate-500">{inscrito.pesoEstimado} kg</span>
                   </td>
@@ -201,7 +235,7 @@ function ListaInscritos({ jornada, onCerrar }) {
                         aria-label={`Estado de ${inscrito.codigoComprobante}`}
                         defaultValue=""
                         onChange={(e) => cambiarEstado(inscrito.id, e.target.value)}
-                        className="rounded-md border border-slate-300 px-2 py-1"
+                        className={`rounded-md border border-sky-200 px-2 py-1 ${COLOR_ESTADO.CONFIRMADA}`}
                       >
                         <option value="" disabled>
                           Confirmada
@@ -211,11 +245,13 @@ function ListaInscritos({ jornada, onCerrar }) {
                         <option value="CANCELADA">Cancelar</option>
                       </select>
                     ) : (
-                      inscrito.estado.replace("_", " ").toLowerCase()
-                    )}
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${COLOR_ESTADO[inscrito.estado]}`}>
+                         {ETIQUETA[inscrito.estado]}
+                      </span>
+                   )}
                   </td>
                   <td className="py-2 pr-4">
-                    {inscrito.estadoCorreo.toLowerCase()}
+                    {ETIQUETA[inscrito.estadoCorreo]}
                     {inscrito.estadoCorreo !== "ENVIADO" && inscrito.estado !== "CANCELADA" && (
                       <button
                         type="button"
