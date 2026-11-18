@@ -1,5 +1,18 @@
 import transporter, { REMITENTE } from '../config/mailer.js';
-import { generarComprobantePdf, formatearFecha } from '../utils/comprobantePdf.js';
+import { generarComprobantePdf, formatearFecha, RUTA_FOTO_REFUGIO } from '../utils/comprobantePdf.js';
+
+const FOTO_REFUGIO = {
+  filename: 'refugioAnimales.jpg',
+  path: RUTA_FOTO_REFUGIO,
+  cid: 'fotoRefugio',
+};
+
+//foto pequeña y centrada
+const FOTO_CORREO = 
+   `<p style="text-align:center; margin-top:24px;">
+    <img src="cid:fotoRefugio" alt="Refugio de Animales" width="120" style="border-radius:8px;"><br>
+    <small style="color:gray;">Refugio de Animales</small>
+    </p>`;
 
 // Mecanismo de seguridad: forzar que tales argumentos recibidos se conviertan en string
 function escaparHtml(texto) {
@@ -41,8 +54,10 @@ export async function enviarComprobanteInscripcion(inscripcion) {
       <h3>Recomendaciones post esterilización</h3>
       <p>${indicaciones}</p>
       <p>Adjuntamos tu comprobante en PDF. Preséntalo el día de la jornada.</p>
+      ${FOTO_CORREO}
     `,
     attachments: [
+      FOTO_REFUGIO,
       {
         filename: `comprobante-${inscripcion.codigoComprobante}.pdf`,
         content: pdf,
