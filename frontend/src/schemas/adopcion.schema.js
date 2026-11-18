@@ -1,5 +1,28 @@
 import { z } from "zod";
 
+// Valores del enum TipoVivienda del backend y su texto para mostrar
+export const TIPOS_VIVIENDA = {
+  CASA_CON_PATIO: "Casa con patio",
+  CASA_SIN_PATIO: "Casa sin patio",
+  CABANA: "Cabaña",
+  DEPARTAMENTO: "Departamento",
+  CONDOMINIO: "Condominio",
+};
+
+// Valores del enum Comuna del backend y su texto para mostrar
+export const COMUNAS = {
+  CONCEPCION: "Concepción",
+  CORONEL: "Coronel",
+  CHIGUAYANTE: "Chiguayante",
+  FLORIDA: "Florida",
+  HUALQUI: "Hualqui",
+  LOTA: "Lota",
+  PENCO: "Penco",
+  SAN_PEDRO_DE_LA_PAZ: "San Pedro de la Paz",
+  SANTA_JUANA: "Santa Juana",
+  TALCAHUANO: "Talcahuano",
+};
+
 function rutValido(rut) {
   const [cuerpo, dv] = rut.split("-");
 
@@ -89,16 +112,13 @@ export const adopcionFormSchema = z.object({
     .min(3, "La dirección debe tener al menos 3 caracteres")
     .max(255, "La dirección no puede superar los 255 caracteres"),
 
-  comuna: z
-    .string()
-    .trim()
-    .min(2, "La comuna debe tener al menos 2 caracteres")
-    .max(100, "La comuna no puede superar los 100 caracteres"),
+  comuna: z.enum(Object.keys(COMUNAS), { error: "Debe seleccionar una comuna" }),
 
-  tipoVivienda: z
-    .string()
-    .trim()
-    .max(100, "El tipo de vivienda no puede superar los 100 caracteres"),
+  // Opcional: "" significa que no seleccionó
+  tipoVivienda: z.union([
+    z.literal(""),
+    z.enum(Object.keys(TIPOS_VIVIENDA), { error: "Seleccione un tipo de vivienda válido" }),
+  ]),
 
   otrasMascotas: z
     .string()

@@ -5,6 +5,7 @@ import { animalesApi, registrosClinicosApi } from "../services/api.js";
 import {
   registroClinicoFormSchema,
   TIPOS_REGISTRO_CLINICO,
+  VETERINARIOS,
   hoyComoTexto,
 } from "../schemas/registroClinico.schema.js";
 import { puedeEditarHistorial } from "../utils.js";
@@ -39,14 +40,13 @@ const claseTarjeta = "rounded-3xl bg-white/90 p-6 shadow-xl shadow-rose-900/5 ri
 const claseBotonPrincipal =
   "inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-600/25 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0";
 
-const formularioVacio = (cuenta) => ({
+const formularioVacio = () => ({
   fecha: hoyComoTexto(),
   tipo: "",
   descripcion: "",
   diagnostico: "",
   tratamiento: "",
-  // Por defecto el veterinario con sesión iniciada; se puede cambiar
-  veterinario: cuenta ? `${cuenta.nombre} ${cuenta.apellido}` : "",
+  veterinario: "",
   observaciones: "",
 });
 
@@ -157,7 +157,7 @@ function HistorialPage({ cuenta }) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registroClinicoFormSchema),
-    defaultValues: formularioVacio(cuenta),
+    defaultValues: formularioVacio(),
   });
 
   useEffect(() => {
@@ -196,7 +196,7 @@ function HistorialPage({ cuenta }) {
 
   const cerrarFormulario = () => {
     setEditando(null);
-    reset(formularioVacio(cuenta));
+    reset(formularioVacio());
   };
 
   const handleVerHistorial = (animal) => {
@@ -214,7 +214,7 @@ function HistorialPage({ cuenta }) {
   const handleAgregar = () => {
     setMensaje("");
     setError("");
-    reset(formularioVacio(cuenta));
+    reset(formularioVacio());
     setEditando("nuevo");
   };
 
@@ -446,7 +446,7 @@ function HistorialPage({ cuenta }) {
                         )}
 
                         <p className="mt-3 text-xs text-slate-500">
-                          👩‍⚕️ {registro.veterinario || "Veterinario no indicado"}
+                          👩‍⚕️ {VETERINARIOS[registro.veterinario] || "Veterinario no indicado"}
                         </p>
                       </article>
                     </li>
@@ -532,11 +532,18 @@ function HistorialPage({ cuenta }) {
               <Campo
                 id="veterinario"
                 label="Veterinario responsable"
-                opcional
                 error={errors.veterinario}
                 className="sm:col-span-2"
               >
-                <input id="veterinario" type="text" className={claseCampo} {...register("veterinario")} />
+                <select id="veterinario" className={claseCampo} {...register("veterinario")}>
+                  <option value="">Seleccione un veterinario</option>
+
+                  {Object.entries(VETERINARIOS).map(([valor, nombre]) => (
+                    <option key={valor} value={valor}>
+                      {nombre}
+                    </option>
+                  ))}
+                </select>
               </Campo>
             </div>
 

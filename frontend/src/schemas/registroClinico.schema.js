@@ -12,6 +12,13 @@ export const TIPOS_REGISTRO_CLINICO = [
   "OTRO",
 ];
 
+// Valores del enum Veterinario del backend y su nombre para mostrar
+export const VETERINARIOS = {
+  JAMES_HERRIOT: "Dr. James Herriot",
+  KAREN_BECKER: "Dra. Karen Becker",
+  FRANCISCA_GONZALEZ: "Dra. Francisca González",
+};
+
 // Fecha de hoy como "AAAA-MM-DD" en hora local, el mismo formato del input type="date"
 export const hoyComoTexto = () => {
   const hoy = new Date();
@@ -45,6 +52,8 @@ export const registroClinicoFormSchema = z.object({
 
   diagnostico: textoOpcional(2000, "El diagnóstico"),
   tratamiento: textoOpcional(2000, "El tratamiento"),
-  veterinario: textoOpcional(100, "El nombre del veterinario"),
+  veterinario: z.enum(Object.keys(VETERINARIOS), {
+    error: "Seleccione el veterinario responsable",
+  }),
   observaciones: textoOpcional(2000, "Las observaciones"),
 });

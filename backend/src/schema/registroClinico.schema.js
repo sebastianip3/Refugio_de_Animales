@@ -11,6 +11,9 @@ export const TIPOS_REGISTRO_CLINICO = [
   'OTRO',
 ];
 
+// Valores del enum Veterinario de Prisma
+export const VETERINARIOS = ['JAMES_HERRIOT', 'KAREN_BECKER', 'FRANCISCA_GONZALEZ'];
+
 // Campos que solo se llenan "cuando corresponde": un texto vacío se guarda como null
 function textoOpcional(maximo) {
   const texto = maximo ? z.string().trim().max(maximo) : z.string().trim();
@@ -28,7 +31,7 @@ export const registroClinicoSchema = z.object({
   descripcion: z.string().trim().min(3).max(2000),
   diagnostico: textoOpcional(2000),
   tratamiento: textoOpcional(2000),
-  veterinario: textoOpcional(100),
+  veterinario: z.enum(VETERINARIOS, { error: 'Debe seleccionar el veterinario responsable' }),
   observaciones: textoOpcional(2000),
 });
 

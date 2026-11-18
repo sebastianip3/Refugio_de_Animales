@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { adopcionesApi, animalesApi } from "../services/api.js";
-import { adopcionFormSchema } from "../schemas/adopcion.schema.js";
+import { adopcionFormSchema, COMUNAS, TIPOS_VIVIENDA } from "../schemas/adopcion.schema.js";
 import { puedeEvaluarAdopciones } from "../utils.js";
 
 const ACCIONES = {
@@ -27,14 +27,14 @@ const ESTILO_ESTADO = {
   EN_REVISION: "bg-sky-100 text-sky-800 ring-sky-200",
   APROBADA: "bg-emerald-100 text-emerald-800 ring-emerald-200",
   RECHAZADA: "bg-rose-100 text-rose-800 ring-rose-200",
-  CANCELADA: "bg-slate-100 text-slate-700 ring-slate-200",
+  CANCELADA: "bg-violet-100 text-violet-800 ring-violet-200",
 };
 
 const ESTILO_ACCION = {
   EN_REVISION: "bg-sky-600 hover:bg-sky-700 text-white",
   APROBADA: "bg-emerald-600 hover:bg-emerald-700 text-white",
   RECHAZADA: "bg-rose-600 hover:bg-rose-700 text-white",
-  CANCELADA: "bg-white hover:bg-slate-50 text-slate-700 ring-1 ring-slate-300",
+  CANCELADA: "bg-violet-600 hover:bg-violet-700 text-white",
 };
 
 const FILTROS = ["TODAS", "PENDIENTE", "EN_REVISION", "APROBADA", "RECHAZADA", "CANCELADA"];
@@ -66,7 +66,7 @@ function aPayload(formulario) {
     email: formulario.email.trim(),
     telefono: formulario.telefono.trim(),
     direccion: formulario.direccion.trim(),
-    comuna: formulario.comuna.trim(),
+    comuna: formulario.comuna,
     tipoVivienda: textoONull(formulario.tipoVivienda),
     otrasMascotas: textoONull(formulario.otrasMascotas),
     motivo: textoONull(formulario.motivo),
@@ -238,6 +238,10 @@ function AdopcionesPage({ cuenta }) {
   };
 
   const handleCambiarEstado = async (adopcion, estado) => {
+    if(estado === "RECHAZADA" && !observaciones.trim()) {
+        setErrorServidor("Debe escribir el motivo del rechazo");
+        return;
+      }
     if (!window.confirm(`¿Cambiar la adopción #${adopcion.id} a "${formatearEnum(estado)}"?`)) {
       return;
     }
@@ -246,14 +250,24 @@ function AdopcionesPage({ cuenta }) {
       setMensaje("");
       setErrorServidor("");
 
-      await adopcionesApi.actualizar(adopcion.id, {
+      const actualizada = await adopcionesApi.actualizar(adopcion.id, {
         estado,
         observaciones: observaciones.trim() || null,
       });
 
       setFichaAbierta(null);
 
+      // Recargar limpia los avisos, por eso se muestran después
       await cargarDatos();
+
+      // correoEnviado solo viene al aprobar o rechazar
+      if (actualizada?.correoEnviado === true) {
+        setMensaje(`Adopción #${adopcion.id} ${formatearEnum(estado)}. Se notificó al adoptante por correo.`);
+      } else if (actualizada?.correoEnviado === false) {
+        setErrorServidor(
+          `Adopción #${adopcion.id} ${formatearEnum(estado)}, pero no se pudo enviar el correo al adoptante (${adopcion.email}).`
+        );
+      }
     } catch (err) {
       setErrorServidor(`No se pudo actualizar: ${err.message}`);
     }
@@ -383,7 +397,15 @@ function AdopcionesPage({ cuenta }) {
               </Campo>
 
               <Campo id="comuna" label="Comuna" error={errors.comuna}>
-                <input type="text" id="comuna" className={claseCampo} {...register("comuna")} />
+                <select id="comuna" className={claseCampo} {...register("comuna")}>
+                  <option value="">Seleccione una comuna</option>
+
+                  {Object.entries(COMUNAS).map(([valor, texto]) => (
+                    <option key={valor} value={valor}>
+                      {texto}
+                    </option>
+                  ))}
+                </select>
               </Campo>
 
               <Campo
@@ -393,13 +415,15 @@ function AdopcionesPage({ cuenta }) {
                 error={errors.tipoVivienda}
                 className="md:col-span-2"
               >
-                <input
-                  type="text"
-                  id="tipoVivienda"
-                  placeholder="Casa con patio, departamento..."
-                  className={claseCampo}
-                  {...register("tipoVivienda")}
-                />
+                <select id="tipoVivienda" className={claseCampo} {...register("tipoVivienda")}>
+                  <option value="">Seleccione un tipo de vivienda</option>
+
+                  {Object.entries(TIPOS_VIVIENDA).map(([valor, texto]) => (
+                    <option key={valor} value={valor}>
+                      {texto}
+                    </option>
+                  ))}
+                </select>
               </Campo>
 
               <Campo id="otrasMascotas" label="Otras mascotas" opcional error={errors.otrasMascotas}>
@@ -502,7 +526,7 @@ function AdopcionesPage({ cuenta }) {
                           <p>{adopcion.email}</p>
                           <p className="text-xs text-slate-500">{adopcion.telefono}</p>
                         </td>
-                        <td className="px-3 py-3 text-slate-600">{adopcion.comuna}</td>
+                        <td className="px-3 py-3 text-slate-600">{COMUNAS[adopcion.comuna] ?? adopcion.comuna}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">
                           {new Date(adopcion.fechaSolicitud).toLocaleDateString("es-CL")}
                         </td>
@@ -577,7 +601,13 @@ function AdopcionesPage({ cuenta }) {
                   className={["otrasMascotas", "motivo"].includes(campo) ? "sm:col-span-2" : ""}
                 >
                   <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</dt>
-                  <dd className="mt-0.5 whitespace-pre-line text-slate-800">{fichaAbierta[campo] || "—"}</dd>
+                  <dd className="mt-0.5 whitespace-pre-line text-slate-800">
+                    {campo === "tipoVivienda"
+                      ? TIPOS_VIVIENDA[fichaAbierta.tipoVivienda] || "—"
+                      : campo === "comuna"
+                        ? COMUNAS[fichaAbierta.comuna] || "—"
+                        : fichaAbierta[campo] || "—"}
+                  </dd>
                 </div>
               ))}
             </dl>
