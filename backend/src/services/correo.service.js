@@ -51,3 +51,49 @@ export async function enviarComprobanteInscripcion(inscripcion) {
     ],
   });
 }
+
+// Avisa al adoptante si su solicitud fue aprobada o rechazada.
+// adopcion debe venir con { animal } incluido
+export async function enviarResultadoAdopcion(adopcion) {
+  const nombreAnimal = adopcion.animal?.nombre || `el animal #${adopcion.animalId}`;
+  const aprobada = adopcion.estado === 'APROBADA';
+
+  const asunto = aprobada
+    ? `¡Tu solicitud para adoptar a ${nombreAnimal} fue aprobada!`
+    : `Resultado de tu solicitud para adoptar a ${nombreAnimal}`;
+
+  const lineas = aprobada
+    ? [
+        `Hola ${adopcion.nombre}, ¡tenemos buenas noticias!`,
+        `Tu solicitud para adoptar a ${nombreAnimal} fue aprobada.`,
+        'Pronto nos pondremos en contacto contigo para coordinar la entrega.',
+      ]
+    : [
+        `Hola ${adopcion.nombre}, revisamos tu solicitud para adoptar a ${nombreAnimal}.`,
+        'Lamentablemente, esta vez no fue aprobada.',
+        '',
+        'Motivo del rechazo:',
+        adopcion.observaciones,
+      ];
+
+  const cuerpoHtml = aprobada
+    ? `
+      <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, ¡tenemos buenas noticias!</p>
+      <p>Tu solicitud para adoptar a <strong>${escaparHtml(nombreAnimal)}</strong> fue <strong>aprobada</strong>.</p>
+      <p>Pronto nos pondremos en contacto contigo para coordinar la entrega.</p>
+    `
+    : `
+      <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, revisamos tu solicitud para adoptar a <strong>${escaparHtml(nombreAnimal)}</strong>.</p>
+      <p>Lamentablemente, esta vez <strong>no fue aprobada</strong>.</p>
+      <h3>Motivo del rechazo</h3>
+      <p>${escaparHtml(adopcion.observaciones).replace(/\n/g, '<br>')}</p>
+    `;
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: adopcion.email,
+    subject: asunto,
+    text: [...lineas, '', 'Gracias por querer darle un hogar a un animal.', 'Refugio de Animales'].join('\n'),
+    html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.<br>Refugio de Animales</p>`,
+  });
+}
