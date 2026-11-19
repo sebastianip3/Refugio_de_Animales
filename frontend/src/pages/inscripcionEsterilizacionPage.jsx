@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { esterilizacionApi, especiesApi } from "../services/api.js";
 import { inscripcionFormSchema } from "../schemas/esterilizacion.schema.js";
+import { COMUNAS } from "../schemas/adopcion.schema.js";
 
 const estiloInput = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none";
 const estiloBoton = "cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300";
@@ -47,10 +48,16 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
             Volver a las jornadas
           </button>  
             
+        <div className="mt-3 flex items-start justify-between gap-4">
+          <div>      
           <h2 className="mt-3 text-2xl font-semibold text-slate-800">{jornada.nombre}</h2>
           <p className="mt-1 text-slate-600">
            📅 {formatearFecha(jornada.fecha)} · 📍 {jornada.lugar}, {jornada.comuna}
           </p>
+          </div>
+
+          <img src="/refugioAnimales.jpg" alt="Refugio de Animales" className="w-24 shrink-0 rounded-lg object-contain" />
+        </div>
 
           {errorServidor && (
             <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-700">
@@ -91,7 +98,7 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
                 </Campo>
 
                 <Campo id="pesoEstimado" etiqueta="Peso Estimado (kg)" error={errors.pesoEstimado}>
-                    <input id="pesoEstimado" type="number" step="0.1" min="0.1" max="150"  
+                    <input id="pesoEstimado" type="number" step="0.5" min="0.5" max="150"  
                      onKeyDown={(e) => ["-", "+", "e", "E"].includes(e.key) && e.preventDefault()} {...register("pesoEstimado")} className={estiloInput} />
                 </Campo>
             </fieldset>
@@ -116,7 +123,12 @@ function FormularioInscripcion({jornada, especies, onVolver, onInscrito}) {
                 </Campo>
 
                 <Campo id="tutorComuna" etiqueta="Comuna" error={errors.tutorComuna}>
-                    <input id="tutorComuna" {...register("tutorComuna")} className={estiloInput} />
+                    <select id="tutorComuna" {...register("tutorComuna")} className={estiloInput} >
+                        <option value="">Seleccione su comuna</option>
+                        {Object.values(COMUNAS).map((nombre) => (
+                            <option key={nombre} value={nombre}>{nombre}</option>
+                        ))}
+                    </select>
                 </Campo>
 
                 <Campo id="tutorSector" etiqueta="Sector" error={errors.tutorSector}>
@@ -204,12 +216,23 @@ function InscripcionEsterilizacionPage() {
                 <div className="flex flex-col gap-4">
                   {jornadas.map((jornada) => (
                     <article key={jornada.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                     <div className="flex items-start justify-between gap-4">
+                     <div>
                       <h2 className="text-xl font-semibold text-slate-800">{jornada.nombre}</h2>
                       <p className="mt-2 text-slate-600">📅 {formatearFecha(jornada.fecha)}</p>
                       <p className="mt-1 text-slate-600">
                        📍 {jornada.lugar}, {jornada.comuna}
                        {jornada.sector ? ` (${jornada.sector})` : ""}
                       </p>
+                      </div>
+
+                      <img
+                       src="/refugioAnimales.jpg"
+                       alt="Refugio de Animales"
+                       className="w-24 shrink-0 rounded-lg object-contain"
+                       />  
+                      </div>
+
                       <p className="mt-1 font-medium text-slate-700">
                         Cupos disponibles: {jornada.cuposDisponibles}
                       </p>

@@ -1,4 +1,7 @@
 import PDFDocument from 'pdfkit';
+import { fileURLToPath } from 'node:url';
+
+export const RUTA_FOTO_REFUGIO = fileURLToPath(new URL('../assets/refugioAnimales.jpg', import.meta.url));
 
 const SEXOS = { MACHO: 'Macho', HEMBRA: 'Hembra' };
 const TAMANOS = { PEQUENO: 'Pequeño', MEDIANO: 'Mediano', GRANDE: 'Grande' };
@@ -33,6 +36,10 @@ export function generarComprobantePdf(inscripcion) {
     doc.on('data', (parte) => partes.push(parte));
     doc.on('end', () => resolve(Buffer.concat(partes)));
     doc.on('error', reject);
+
+    //foto en esquina superior derecha
+    const anchoFoto = 80;
+    doc.image(RUTA_FOTO_REFUGIO, doc.page.width - 50 - anchoFoto, 30, {fit: [anchoFoto,anchoFoto]});
 
     // Encabezado
     doc.font('Helvetica-Bold').fontSize(18).text('Comprobante de inscripción', { align: 'center' });

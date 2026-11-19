@@ -1,5 +1,18 @@
 import transporter, { REMITENTE } from '../config/mailer.js';
-import { generarComprobantePdf, formatearFecha } from '../utils/comprobantePdf.js';
+import { generarComprobantePdf, formatearFecha, RUTA_FOTO_REFUGIO } from '../utils/comprobantePdf.js';
+
+const FOTO_REFUGIO = {
+  filename: 'refugioAnimales.jpg',
+  path: RUTA_FOTO_REFUGIO,
+  cid: 'fotoRefugio',
+};
+
+//foto pequeña y centrada
+const FOTO_CORREO = 
+   `<p style="text-align:center; margin-top:24px;">
+    <img src="cid:fotoRefugio" alt="Refugio de Animales" width="120" style="border-radius:8px;"><br>
+    <small style="color:gray;">Refugio de Animales</small>
+    </p>`;
 
 // Mecanismo de seguridad: forzar que tales argumentos recibidos se conviertan en string
 function escaparHtml(texto) {
@@ -41,8 +54,10 @@ export async function enviarComprobanteInscripcion(inscripcion) {
       <h3>Recomendaciones post esterilización</h3>
       <p>${indicaciones}</p>
       <p>Adjuntamos tu comprobante en PDF. Preséntalo el día de la jornada.</p>
+      ${FOTO_CORREO}
     `,
     attachments: [
+      FOTO_REFUGIO,
       {
         filename: `comprobante-${inscripcion.codigoComprobante}.pdf`,
         content: pdf,
@@ -176,4 +191,65 @@ export function enviarAdopcionRechazadaTrasVisita(adopcion, visita) {
       <p>Refugio de Animales</p>
     `,
   });
+}
+
+export async function enviarCambiosJornada(inscripcion, jornada, cambios) {
+  const pdf = await generarComprobantePdf({ ...inscripcion, jornada});
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: inscripcion.tutorEmail,
+    subject: `Cambios en la jornada: ${jornada.nombre}`,
+    text: [
+      `Hola ${inscripcion.tutorNombre}, la jornada de esterilización en las que estas incrito tuvo cambios: `, 
+      ...cambios,
+      '',
+      `tu folio ${inscripcion.codigoComprobante} sigue siendo válido. Adjuntamos tu comprobante actualizado. `,
+    ].join('\n'),
+    html: `
+      <p>Hola <strong>${escaparHtml(inscripcion.tutorNombre)}</strong>, la jornada
+      <strong>${escaparHtml(jornada.nombre)}</strong> tuvo cambios:</p>
+      <ul>${cambios.map((c) => `<li>${escaparHtml(c)}</li>`).join('')}</ul>
+      <p>Tu folio <strong>${inscripcion.codigoComprobante}</strong> sigue siendo válido.
+      Adjuntamos tu comprobante actualizado.</p>
+      ${FOTO_CORREO}
+      `,
+      attachments: [
+        FOTO_REFUGIO,
+        {
+          filename: `comprobante-${inscripcion.codigoComprobante}.pdf`,
+          content: pdf,
+          contentType: 'application/pdf',
+        },
+      ],
+  });
+}
+
+export async function enviarCancelacionInscripcion(inscripcion) {
+  const { jornada } = inscripcion;
+  const motivo = inscripcion.observaciones
+  ? `<p><strong>Motivo:</strong> ${escaparHtml(inscripcion.observaciones)}</p>`
+  : '';
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: inscripcion.tutorEmail,
+    subject: `Inscripción cancelada: ${jornada.nombre}`,
+    text: [
+      `Hola ${inscripcion.tutorNombre}, tu inscripción (folio ${inscripcion.codigoComprobante})`,
+      `a la jornada "${jornada.nombre}" del ${formatearFecha(jornada.fecha)} fue cancelada`,
+      inscripcion.observaciones ? `Motivo: ${inscripcion.observaciones}` : '',
+      '',
+      'Sí crees que es un error, contacta al refugio indicando tu folio.',
+    ].join('\n'),
+    html:`
+    <p>Hola <strong>${escaparHtml(inscripcion.tutorNombre)}</strong>, tu inscripción
+    (folio <strong>${inscripcion.codigoComprobante}</strong>) a la jornada
+    <strong>${escaparHtml(jornada.nombre)}</strong> del ${formatearFecha(jornada.fecha)} fue <strong>cancelada</strong>.</p>
+    ${motivo}
+    <p>Si crees que es un error, contacta al refugio indicando tu folio.</p>
+    ${FOTO_CORREO}
+    `,
+    attachments: [FOTO_REFUGIO],
+   });
 }
