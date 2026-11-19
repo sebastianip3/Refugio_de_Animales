@@ -23,6 +23,35 @@ export const COMUNAS = {
   TALCAHUANO: "Talcahuano",
 };
 
+// Da formato al RUT mientras se escribe: "123456785" -> "12.345.678-5".
+// El último carácter siempre es el dígito verificador (número o K)
+export function formatearRut(valor) {
+  const limpio = valor
+    .toUpperCase()
+    .replace(/[^0-9K]/g, "")
+    // La K solo puede ser el dígito verificador, al final
+    .replace(/K(?!$)/g, "")
+    .slice(0, 9);
+
+  if (limpio.length <= 1) return limpio;
+
+  const cuerpo = limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${cuerpo}-${limpio.slice(-1)}`;
+}
+
+// Da formato al celular mientras se escribe: "912345678" -> "9 1234 5678".
+// Siempre empieza con 9: lo que se escriba antes del 9 (por ejemplo +56) se descarta
+export function formatearTelefono(valor) {
+  const digitos = valor
+    .replace(/\D/g, "")
+    .replace(/^[^9]+/, "")
+    .slice(0, 9);
+
+  return [digitos.slice(0, 1), digitos.slice(1, 5), digitos.slice(5)]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function rutValido(rut) {
   const [cuerpo, dv] = rut.split("-");
 
@@ -49,6 +78,8 @@ function rutValido(rut) {
 const rutSchema = z
   .string()
   .trim()
+  // El RUT real más largo es "99.999.999-9": 12 caracteres con puntos y guion
+  .max(12, "El RUT no puede superar los 12 caracteres")
   .transform((valor) =>
     valor
       .replace(/\./g, "")
@@ -82,7 +113,7 @@ export const adopcionFormSchema = z.object({
     .string()
     .trim()
     .min(2, "El nombre debe tener al menos 2 caracteres")
-    .max(100, "El nombre no puede superar los 100 caracteres"),
+    .max(57, "El nombre no puede superar los 57 caracteres"),
 
   rut: rutSchema,
 
@@ -93,7 +124,7 @@ export const adopcionFormSchema = z.object({
     .max(254, "El correo es demasiado largo")
     .email("Ingrese un correo electrónico válido"),
 
-  // Teléfono chileno de 9 dígitos, con o sin +56 (igual que en el backend)
+  // Celular chileno: 9 dígitos que empiezan con 9, con o sin +56 (igual que en el backend)
   telefono: z
     .string()
     .trim()
@@ -101,16 +132,16 @@ export const adopcionFormSchema = z.object({
       valor.replace(/[\s\-().]/g, "").replace(/^(\+?56)/, "")
     )
     .refine(
-      (valor) => /^[2-9]\d{8}$/.test(valor),
-      "Ingrese un teléfono de 9 dígitos, por ejemplo 9 1234 5678"
+      (valor) => /^9\d{8}$/.test(valor),
+      "Ingrese un celular de 9 dígitos que empiece con 9, por ejemplo 9 1234 5678"
     )
     .transform((valor) => `+56${valor}`),
 
   direccion: z
     .string()
     .trim()
-    .min(3, "La dirección debe tener al menos 3 caracteres")
-    .max(255, "La dirección no puede superar los 255 caracteres"),
+    .min(5, "La dirección debe tener al menos 5 caracteres")
+    .max(100, "La dirección no puede superar los 100 caracteres"),
 
   comuna: z.enum(Object.keys(COMUNAS), { error: "Debe seleccionar una comuna" }),
 
@@ -122,9 +153,11 @@ export const adopcionFormSchema = z.object({
 
   otrasMascotas: z
     .string()
-    .trim(),
+    .trim()
+    .max(200, "Otras mascotas no puede superar los 200 caracteres"),
 
   motivo: z
     .string()
-    .trim(),
+    .trim()
+    .max(300, "El motivo no puede superar los 300 caracteres"),
 });

@@ -78,6 +78,23 @@ export const adopcionesApi = {
   crear: (adopcion) => request("/adopciones", { method: "POST", body: JSON.stringify(adopcion) }),
   actualizar: (id, cambios) =>
     request(`/adopciones/${id}`, { method: "PATCH", body: JSON.stringify(cambios) }),
+  // Visitas post adopción (solo el encargado)
+  // Visitas agendadas de hoy en adelante, de todas las adopciones
+  proximasVisitas: () => request("/adopciones/visitas/proximas"),
+  listarVisitas: (id) => request(`/adopciones/${id}/visitas`),
+  agendarVisita: (id, fecha, hora) =>
+    request(`/adopciones/${id}/visitas`, { method: "POST", body: JSON.stringify({ fecha, hora }) }),
+  cancelarVisita: (id, visitaId) =>
+    request(`/adopciones/${id}/visitas/${visitaId}/cancelar`, { method: "PATCH" }),
+  // resultado: { estadoAnimal, observaciones }
+  registrarResultadoVisita: (id, visitaId, resultado) =>
+    request(`/adopciones/${id}/visitas/${visitaId}/resultado`, {
+      method: "PATCH",
+      body: JSON.stringify(resultado),
+    }),
+  // Después de registrar la visita: rechaza la adopción y el animal vuelve al refugio
+  rechazarAdopcionTrasVisita: (id, visitaId) =>
+    request(`/adopciones/${id}/visitas/${visitaId}/rechazar-adopcion`, { method: "PATCH" }),
 };
 
 export const cuidadosApi = {

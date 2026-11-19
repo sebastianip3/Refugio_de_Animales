@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { adopcionesApi } from "../services/api.js";
 import { puedeEvaluarAdopciones } from "../utils.js";
 
-const ESTADOS = ["PENDIENTE", "EN_REVISION", "APROBADA", "RECHAZADA", "CANCELADA"];
+const ESTADOS = ["PENDIENTE", "EN_REVISION", "APROBADA", "RECHAZADA"];
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
 
