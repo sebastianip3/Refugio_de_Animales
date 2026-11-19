@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
-import { enviarComprobanteInscripcion } from './correo.service.js';
+import { enviarComprobanteInscripcion, enviarCambiosJornada } from './correo.service.js';
+import { formatearFecha } from '../utils/comprobantePdf.js';
 
 // Cuenta cuantas personas ocupan cupo en una jornada, las inscripciones canceladas no ocupan cupo
 async function contarCuposOcupados(db, jornadaId) {
@@ -66,9 +67,41 @@ export async function crearJornada(data) {
   return prisma.jornadaEsterilizacion.create({ data: data });
 }
 
+//compara jornada de antes y después y devuelve los cambios que importan al inscrito
+function detectarCambios(anterior, nueva) {
+  const cambios = [];
+
+  if(anterior.fecha.getTime() !== nueva.fecha.getTime()) {
+    cambios.push(`Fecha y hora: ${formatearFecha(anterior.fecha)} → ${formatearFecha(nueva.fecha)} `);
+  }
+  if(anterior.comuna !== nueva.comuna) cambios.push(`Comuna: ${anterior.comuna} → ${nueva.comuna}`);
+  if(anterior.lugar !== nueva.lugar) cambios.push(`Lugar: ${anterior.lugar} → ${nueva.lugar}`);
+  if(anterior.sector !== nueva.sector) cambios.push(`Sector: ${anterior.sector} → ${nueva.sector}`);
+
+  return cambios;
+}
+
+async function avisarCambios(jornada, cambios) {
+  const inscritos = await prisma.inscripcionEsterilizacion.findMany({
+    where: {jornadaId: jornada.id, estado: 'CONFIRMADA'},
+    include: {especie:true},
+  });
+
+  let avisados = 0;
+  for (const inscrito of inscritos) {
+    try{
+      await enviarCambiosJornada(inscrito, jornada, cambios);
+      avisados++;
+    }catch (error){
+      console.error(`No se pudo avisar al folio ${inscrito.codigoComprobante}:`, error.message);
+    }
+  }
+  return avisados;
+}
+
 // no se puede dejar menos cupos que personas inscritas
 export async function actualizarJornada(id, data) {
-  await obtenerJornada(id);
+  const anterior = await obtenerJornada(id);
 
   if (data.fecha && data.fecha <= new Date()) {
     throw new AppError(400, 'La fecha de la jornada debe ser futura');
@@ -81,7 +114,13 @@ export async function actualizarJornada(id, data) {
     }
   }
 
-  return prisma.jornadaEsterilizacion.update({ where: { id: id }, data: data });
+  const jornada = await prisma.jornadaEsterilizacion.update({where: {id:id}, data: data});
+  const cambios = detectarCambios(anterior, jornada);
+
+  if(cambios.length > 0) {
+    jornada.avisados = await avisarCambios(jornada, cambios);
+  }
+  return jornada;
 }
 
 // la administradora abre el formulario para que la comunidad se inscriba
