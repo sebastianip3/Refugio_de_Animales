@@ -383,7 +383,7 @@ function PanelJornadas() {
 
   const guardarJornada = async (datos) => {
     const ok = jornadaEditando
-      ? await ejecutar(() => esterilizacionApi.actualizarJornada(jornadaEditando.id, datos), "Jornada actualizada")
+      ? await ejecutar(() => esterilizacionApi.actualizarJornada(jornadaEditando.id, datos), "Jornada actualizada, Si cambio la fecha o el lugar, se avisó por correo a los inscritos")
       : await ejecutar(() => esterilizacionApi.crearJornada(datos), "Jornada creada (formulario cerrado)");
     if (ok) cerrarFormularioJornada();
   };
