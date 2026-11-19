@@ -104,6 +104,19 @@ const rutSchema = z
     "Ingrese un RUT válido"
   );
 
+const correoSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, "El correo es demasiado largo")
+  .email("Ingrese un correo electrónico válido");
+
+// Consulta del estado de la solicitud: RUT y correo con los que se envió
+export const consultaSolicitudSchema = z.object({
+  rut: rutSchema,
+  email: correoSchema,
+});
+
 export const adopcionFormSchema = z.object({
   animalId: z
     .string()
@@ -113,16 +126,13 @@ export const adopcionFormSchema = z.object({
     .string()
     .trim()
     .min(2, "El nombre debe tener al menos 2 caracteres")
-    .max(57, "El nombre no puede superar los 57 caracteres"),
+    .max(57, "El nombre no puede superar los 57 caracteres")
+    // Solo letras (con tildes, ñ y ü), espacios y apóstrofo (O'Higgins): sin números ni otros caracteres especiales
+    .regex(/^[\p{L} '’]+$/u, "El nombre solo puede tener letras, espacios y apóstrofo ('), sin números ni otros caracteres especiales"),
 
   rut: rutSchema,
 
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .max(254, "El correo es demasiado largo")
-    .email("Ingrese un correo electrónico válido"),
+  email: correoSchema,
 
   // Celular chileno: 9 dígitos que empiezan con 9, con o sin +56 (igual que en el backend)
   telefono: z

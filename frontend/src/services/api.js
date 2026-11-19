@@ -76,6 +76,9 @@ export const adopcionesApi = {
   animalesEnProceso: () => request("/adopciones/animales-en-proceso"),
   obtener: (id) => request(`/adopciones/${id}`),
   crear: (adopcion) => request("/adopciones", { method: "POST", body: JSON.stringify(adopcion) }),
+  // Pública: el adoptante ve el estado de sus solicitudes con su RUT y su correo
+  consultarSolicitudes: (rut, email) =>
+    request("/adopciones/consultar", { method: "POST", body: JSON.stringify({ rut, email }) }),
   actualizar: (id, cambios) =>
     request(`/adopciones/${id}`, { method: "PATCH", body: JSON.stringify(cambios) }),
   // Visitas post adopción (solo el encargado)

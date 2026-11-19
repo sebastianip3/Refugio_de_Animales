@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { adopcionesApi, animalesApi } from "../services/api.js";
 import {
   adopcionFormSchema,
+  consultaSolicitudSchema,
   COMUNAS,
   formatearRut,
   formatearTelefono,
@@ -684,6 +685,142 @@ function ProximasVisitas({ visitas, onAbrirSeguimiento }) {
   );
 }
 
+// Texto para el adoptante según el estado de su solicitud
+const DESCRIPCION_ESTADO = {
+  PENDIENTE: "Recibimos tu solicitud. Pronto nuestro equipo comenzará a revisarla.",
+  EN_REVISION: "Nuestro equipo está revisando tu solicitud.",
+  APROBADA: "¡Tu solicitud fue aprobada! Nos pondremos en contacto contigo.",
+  RECHAZADA: "Tu solicitud no fue aprobada.",
+};
+
+// Consulta pública: el adoptante ingresa su RUT y su correo y ve sus solicitudes
+function ConsultaSolicitud() {
+  const [solicitudes, setSolicitudes] = useState(null);
+  const [error, setError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(consultaSolicitudSchema),
+    defaultValues: { rut: "", email: "" },
+  });
+
+  const campoRut = register("rut");
+
+  const onConsultar = async ({ rut, email }) => {
+    try {
+      setError("");
+      setSolicitudes(await adopcionesApi.consultarSolicitudes(rut, email));
+    } catch (err) {
+      setSolicitudes(null);
+      setError(`No se pudo consultar la solicitud: ${err.message}`);
+    }
+  };
+
+  return (
+    <div className={claseTarjeta}>
+      <div className="border-b border-slate-100 pb-5">
+        <h3 className="text-2xl font-bold text-slate-900">Consulta tu solicitud</h3>
+        <p className="text-sm text-slate-500">
+          Ingresa el RUT y el correo con que enviaste la solicitud para ver en qué estado está.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit(onConsultar)} noValidate className="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-start">
+        <Campo id="consultaRut" label="RUT" error={errors.rut}>
+          <input
+            type="text"
+            id="consultaRut"
+            placeholder="12.345.678-5"
+            maxLength={12}
+            className={claseCampo}
+            {...campoRut}
+            onChange={(e) => {
+              e.target.value = formatearRut(e.target.value);
+              campoRut.onChange(e);
+            }}
+          />
+        </Campo>
+
+        <Campo id="consultaEmail" label="Correo electrónico" error={errors.email}>
+          <input
+            type="email"
+            id="consultaEmail"
+            placeholder="correo@ejemplo.com"
+            maxLength={254}
+            className={claseCampo}
+            {...register("email")}
+          />
+        </Campo>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-xl bg-sky-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-wait disabled:opacity-60 md:mt-6"
+        >
+          {isSubmitting ? "Consultando..." : "Consultar"}
+        </button>
+      </form>
+
+      {error && (
+        <div className="mt-4">
+          <Aviso tipo="error">{error}</Aviso>
+        </div>
+      )}
+
+      {solicitudes?.length === 0 && (
+        <p className="mt-5 rounded-2xl bg-slate-50 p-5 text-center text-slate-600">
+          No encontramos solicitudes con ese RUT y correo. Revisa que sean los mismos que usaste en el formulario.
+        </p>
+      )}
+
+      {solicitudes?.length > 0 && (
+        <ul className="mt-5 space-y-3">
+          {solicitudes.map((solicitud) => (
+            <li
+              key={`${solicitud.fechaSolicitud}-${solicitud.animal?.nombre}`}
+              className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <FotoAnimal animal={solicitud.animal} />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-800">
+                      {solicitud.animal?.nombre || "Sin nombre"}
+                    </p>
+                    <p className="text-sm capitalize text-slate-500">
+                      {solicitud.animal?.especie?.nombre} · Solicitada el{" "}
+                      {new Date(solicitud.fechaSolicitud).toLocaleDateString("es-CL")}
+                    </p>
+                  </div>
+                </div>
+                <InsigniaEstado estado={solicitud.estado} />
+              </div>
+
+              <p className="mt-3 text-sm text-slate-700">{DESCRIPCION_ESTADO[solicitud.estado]}</p>
+
+              {solicitud.motivoRechazo && (
+                <p className="mt-1 whitespace-pre-line break-words text-sm text-slate-700">
+                  <span className="font-semibold">Motivo:</span> {solicitud.motivoRechazo}
+                </p>
+              )}
+
+              {solicitud.proximaVisita && (
+                <p className="mt-1 text-sm text-slate-700">
+                  <span className="font-semibold">Próxima visita de seguimiento:</span>{" "}
+                  {textoVisita(solicitud.proximaVisita)}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function AdopcionesPage({ cuenta }) {
   const esEncargado = puedeEvaluarAdopciones(cuenta);
 
@@ -791,12 +928,22 @@ function AdopcionesPage({ cuenta }) {
       setMensaje("");
       setErrorServidor("");
 
-      await adopcionesApi.crear(aPayload(datos));
+      const creada = await adopcionesApi.crear(aPayload(datos));
 
       reset(FORMULARIO_VACIO);
-      setMensaje("Solicitud de adopción registrada.");
 
+      // Recargar limpia los avisos, por eso se muestran después
       await cargarDatos();
+
+      if (creada?.correoEnviado === false) {
+        setMensaje(
+          "Solicitud de adopción registrada. No pudimos enviarte el correo de confirmación, pero puedes consultar el estado de tu solicitud más abajo."
+        );
+      } else {
+        setMensaje(
+          `Solicitud de adopción registrada. Te enviamos un correo de confirmación a ${creada?.email ?? "tu correo"}.`
+        );
+      }
     } catch (err) {
       setErrorServidor(`No se pudo registrar la adopción: ${err.message}`);
     }
@@ -1157,6 +1304,9 @@ function AdopcionesPage({ cuenta }) {
             </button>
           </div>
         </form>
+
+        {/* El adoptante consulta el estado de sus solicitudes (el encargado ya las ve en la tabla) */}
+        {!esEncargado && <ConsultaSolicitud />}
       </div>
 
       {esEncargado && fichaAbierta && (
