@@ -97,3 +97,83 @@ export async function enviarResultadoAdopcion(adopcion) {
     html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.<br>Refugio de Animales</p>`,
   });
 }
+
+// "AAAA-MM-DD..." → "DD-MM-AAAA". Las visitas se guardan a medianoche UTC, así no se desfasa el día
+const formatearDiaVisita = (fecha) => fecha.toISOString().slice(0, 10).split('-').reverse().join('-');
+
+// Avisa al adoptante que se agendó o se canceló una visita de seguimiento.
+// adopcion debe venir con { nombre, email, animal }
+export function enviarAvisoVisita(adopcion, visita) {
+  const nombreAnimal = adopcion.animal?.nombre || 'tu mascota';
+  // Las visitas antiguas no tienen hora
+  const fecha = visita.hora
+    ? `${formatearDiaVisita(visita.fecha)} a las ${visita.hora}`
+    : formatearDiaVisita(visita.fecha);
+  const cancelada = visita.estado === 'CANCELADA';
+
+  const asunto = cancelada
+    ? `Visita de seguimiento del ${fecha} cancelada`
+    : `Visita de seguimiento agendada para el ${fecha}`;
+
+  const texto = cancelada
+    ? [
+        `Hola ${adopcion.nombre}, te informamos que la visita de seguimiento de ${nombreAnimal} agendada para el ${fecha} fue cancelada.`,
+        'Si corresponde, te avisaremos cuando agendemos una nueva fecha.',
+      ]
+    : [
+        `Hola ${adopcion.nombre}, agendamos una visita de seguimiento para ver cómo está ${nombreAnimal} en su nuevo hogar.`,
+        `Fecha y hora de la visita: ${fecha}`,
+        'Si no puedes recibirnos ese día, responde este correo para coordinar otra fecha.',
+      ];
+
+  const html = cancelada
+    ? `
+      <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, te informamos que la visita de seguimiento de <strong>${escaparHtml(nombreAnimal)}</strong> agendada para el <strong>${fecha}</strong> fue <strong>cancelada</strong>.</p>
+      <p>Si corresponde, te avisaremos cuando agendemos una nueva fecha.</p>
+    `
+    : `
+      <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, agendamos una visita de seguimiento para ver cómo está <strong>${escaparHtml(nombreAnimal)}</strong> en su nuevo hogar.</p>
+      <p><strong>Fecha y hora de la visita:</strong> ${fecha}</p>
+      <p>Si no puedes recibirnos ese día, responde este correo para coordinar otra fecha.</p>
+    `;
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: adopcion.email,
+    subject: asunto,
+    text: [...texto, '', 'Refugio de Animales'].join('\n'),
+    html: `${html}<p>Refugio de Animales</p>`,
+  });
+}
+
+// Avisa al adoptante que, después de la visita de seguimiento, la adopción fue rechazada
+// y el animal vuelve al refugio. adopcion debe venir con { nombre, email, animal, observaciones }
+export function enviarAdopcionRechazadaTrasVisita(adopcion, visita) {
+  const nombreAnimal = adopcion.animal?.nombre || 'el animal';
+  const fecha = formatearDiaVisita(visita.fecha);
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: adopcion.email,
+    subject: `Resultado de la visita de seguimiento de ${nombreAnimal}`,
+    text: [
+      `Hola ${adopcion.nombre}, después de la visita de seguimiento del ${fecha} revisamos las condiciones en que se encuentra ${nombreAnimal}.`,
+      'Lamentablemente, decidimos dejar sin efecto la adopción y el animal volverá al refugio.',
+      '',
+      'Motivo:',
+      adopcion.observaciones,
+      '',
+      'Nos pondremos en contacto contigo para coordinar el retiro.',
+      '',
+      'Refugio de Animales',
+    ].join('\n'),
+    html: `
+      <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, después de la visita de seguimiento del <strong>${fecha}</strong> revisamos las condiciones en que se encuentra <strong>${escaparHtml(nombreAnimal)}</strong>.</p>
+      <p>Lamentablemente, decidimos <strong>dejar sin efecto la adopción</strong> y el animal volverá al refugio.</p>
+      <h3>Motivo</h3>
+      <p>${escaparHtml(adopcion.observaciones).replace(/\n/g, '<br>')}</p>
+      <p>Nos pondremos en contacto contigo para coordinar el retiro.</p>
+      <p>Refugio de Animales</p>
+    `,
+  });
+}

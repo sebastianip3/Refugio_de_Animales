@@ -34,12 +34,27 @@ enum TipoRegistroClinico {
 }
 
 // PENDIENTE y EN_REVISION cuentan como "adopción en proceso"
+// Las solicitudes no se cancelan: "Rechazar" cumple esa función
 enum EstadoAdopcion {
   PENDIENTE
   EN_REVISION
   APROBADA
   RECHAZADA
+}
+
+// Estado de una visita post adopción. El encargado puede cancelarla antes de su fecha
+// o registrar su resultado (REALIZADA) cuando llega la fecha
+enum EstadoVisita {
+  AGENDADA
   CANCELADA
+  REALIZADA
+}
+
+// Cómo se encontró al animal en la visita
+enum EstadoAnimalVisita {
+  BIEN
+  REGULAR
+  CON_PROBLEMAS
 }
 
 // Veterinarios responsables de los registros clínicos
@@ -243,11 +258,32 @@ model Adopcion {
   animalId Int
   animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
 
+  visitas VisitaAdopcion[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([animalId, estado])
   @@map("adopciones")
+}
+
+// Visita post adopción que agenda el encargado después de aprobar una adopción
+model VisitaAdopcion {
+  id        Int          @id @default(autoincrement())
+  fecha     DateTime
+  // "HH:MM", uno de los horarios fijos (10:00, 12:00 o 15:00). Las visitas anteriores a este campo no tienen hora
+  hora      String?      @db.VarChar(5)
+  estado    EstadoVisita @default(AGENDADA)
+  // Resultado de la visita: se llenan al registrarla
+  estadoAnimal  EstadoAnimalVisita?
+  observaciones String?             @db.Text
+  createdAt DateTime     @default(now())
+
+  adopcionId Int
+  adopcion   Adopcion @relation(fields: [adopcionId], references: [id], onDelete: Restrict)
+
+  @@index([adopcionId, fecha])
+  @@map("visitas_adopcion")
 }
 
 // Antecedente veterinario de un animal. Los adoptantes solo pueden consultarlo

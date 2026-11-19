@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 import { ESTADOS_EN_PROCESO } from '../schema/adopcion.schema.js';
-import { enviarResultadoAdopcion } from './correo.service.js';
+import { enviarResultadoAdopcion, enviarAvisoVisita, enviarAdopcionRechazadaTrasVisita } from './correo.service.js';
 
 // Serializable evita que dos solicitudes simultáneas pasen la verificación a la vez
 const TX_OPCIONES = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
@@ -105,5 +105,224 @@ export async function actualizarAdopcion(id, data) {
   } catch (error) {
     console.error('No se pudo enviar el correo de la adopción:', error.message);
     return { ...adopcion, correoEnviado: false };
+  }
+}
+
+// Próximas visitas de todas las adopciones: agendadas de hoy en adelante, de la más cercana a la más lejana
+export function listarProximasVisitas() {
+  return prisma.visitaAdopcion.findMany({
+    where: { estado: 'AGENDADA', fecha: { gte: diaUtc(new Date()) } },
+    include: {
+      adopcion: {
+        select: {
+          id: true,
+          nombre: true,
+          telefono: true,
+          direccion: true,
+          comuna: true,
+          animal: { select: { nombre: true, especie: { select: { nombre: true } } } },
+        },
+      },
+    },
+    orderBy: [{ fecha: 'asc' }, { hora: 'asc' }],
+  });
+}
+
+// Visitas agendadas de una adopción, de la más próxima a la más lejana
+export async function listarVisitas(adopcionId) {
+  const adopcion = await prisma.adopcion.findUnique({ where: { id: adopcionId }, select: { id: true } });
+  if (!adopcion) throw new AppError(404, 'Adopción no encontrada');
+
+  return prisma.visitaAdopcion.findMany({ where: { adopcionId }, orderBy: { fecha: 'asc' } });
+}
+
+// Días mínimos entre la adopción y la visita de seguimiento
+const DIAS_MINIMOS_VISITA = 15;
+
+// Medianoche UTC del día (local) de la fecha más N días, igual que las fechas del formulario
+function diaUtc(fecha, diasExtra = 0) {
+  return new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() + diasExtra));
+}
+
+// "AAAA-MM-DD..." → "DD-MM-AAAA"
+const formatearDia = (fecha) => fecha.toISOString().slice(0, 10).split('-').reverse().join('-');
+
+// Datos del adoptante que necesita el correo de la visita
+const DATOS_AVISO_VISITA = { nombre: true, email: true, animal: { select: { nombre: true } } };
+
+// Envía el aviso de la visita al adoptante. Si el correo falla, la visita igual queda guardada
+async function avisarVisita(adopcion, visita) {
+  try {
+    await enviarAvisoVisita(adopcion, visita);
+    return { ...visita, correoEnviado: true };
+  } catch (error) {
+    console.error('No se pudo enviar el correo de la visita:', error.message);
+    return { ...visita, correoEnviado: false };
+  }
+}
+
+// Solo se agendan visitas a adopciones aprobadas, desde 15 días después de la adopción,
+// y una a la vez: si ya tiene una visita agendada próxima no se agenda otra.
+// Después de guardar se avisa al adoptante por correo
+export async function agendarVisita(adopcionId, data) {
+  const { adopcion, visita } = await prisma.$transaction(async (tx) => {
+    const adopcion = await tx.adopcion.findUnique({
+      where: { id: adopcionId },
+      select: { ...DATOS_AVISO_VISITA, estado: true, updatedAt: true, animal: { select: { nombre: true, fechaEgreso: true } } },
+    });
+    if (!adopcion) throw new AppError(404, 'Adopción no encontrada');
+    if (adopcion.estado !== 'APROBADA') {
+      throw new AppError(409, 'Solo se pueden agendar visitas a una adopción aprobada');
+    }
+
+    // Al aprobar, el animal registra su egreso: esa es la fecha de la adopción
+    const fechaAdopcion = adopcion.animal.fechaEgreso ?? adopcion.updatedAt;
+    const fechaMinima = diaUtc(fechaAdopcion, DIAS_MINIMOS_VISITA);
+    if (data.fecha < fechaMinima) {
+      throw new AppError(
+        409,
+        `La visita debe ser al menos ${DIAS_MINIMOS_VISITA} días después de la adopción (desde el ${formatearDia(fechaMinima)})`
+      );
+    }
+
+    // No se agenda en una hora que ya pasó (por ejemplo hoy a las 16:30 si son las 16:39)
+    if (inicioVisita(data) <= new Date()) {
+      throw new AppError(409, 'La hora de la visita ya pasó, elija una hora posterior a la actual');
+    }
+
+    // Un horario ocupado por otra visita (de cualquier adopción) no se puede volver a tomar
+    const horarioOcupado = await tx.visitaAdopcion.findFirst({
+      where: { fecha: data.fecha, hora: data.hora, estado: { not: 'CANCELADA' } },
+    });
+    if (horarioOcupado) {
+      throw new AppError(
+        409,
+        `El horario del ${formatearDia(data.fecha)} a las ${data.hora} ya está ocupado por otra visita, elija otra hora`
+      );
+    }
+
+    // La nueva visita debe ser al menos el día después de la última (las canceladas no cuentan)
+    const ultimaVisita = await tx.visitaAdopcion.findFirst({
+      where: { adopcionId, estado: { not: 'CANCELADA' } },
+      orderBy: { fecha: 'desc' },
+    });
+    if (ultimaVisita && data.fecha <= ultimaVisita.fecha) {
+      const desde = new Date(ultimaVisita.fecha.getTime() + 24 * 60 * 60 * 1000);
+      throw new AppError(
+        409,
+        `La nueva visita debe ser después de la última visita (${formatearDia(ultimaVisita.fecha)}), desde el ${formatearDia(desde)}`
+      );
+    }
+
+    // Las visitas canceladas no cuentan
+    const visitaPendiente = await tx.visitaAdopcion.findFirst({
+      where: { adopcionId, estado: 'AGENDADA', fecha: { gte: diaUtc(new Date()) } },
+      orderBy: { fecha: 'asc' },
+    });
+    if (visitaPendiente) {
+      throw new AppError(
+        409,
+        `Este adoptante ya tiene una visita agendada para el ${formatearDia(visitaPendiente.fecha)}`
+      );
+    }
+
+    const visita = await tx.visitaAdopcion.create({ data: { ...data, adopcionId } });
+    return { adopcion, visita };
+  }, TX_OPCIONES);
+
+  return avisarVisita(adopcion, visita);
+}
+
+// Solo se cancela una visita agendada que aún no pasa. La visita debe ser de esa adopción,
+// para no cancelar una ajena cambiando la URL. Después se avisa al adoptante por correo
+export async function cancelarVisita(adopcionId, visitaId) {
+  const visita = await prisma.visitaAdopcion.findFirst({
+    where: { id: visitaId, adopcionId },
+    include: { adopcion: { select: DATOS_AVISO_VISITA } },
+  });
+  if (!visita) throw new AppError(404, 'Visita no encontrada');
+  if (visita.estado === 'CANCELADA') throw new AppError(409, 'La visita ya está cancelada');
+  if (visita.estado === 'REALIZADA') throw new AppError(409, 'No se puede cancelar una visita ya realizada');
+  if (visita.fecha < diaUtc(new Date())) {
+    throw new AppError(409, 'No se puede cancelar una visita cuya fecha ya pasó');
+  }
+
+  const cancelada = await prisma.visitaAdopcion.update({
+    where: { id: visitaId },
+    data: { estado: 'CANCELADA' },
+  });
+
+  return avisarVisita(visita.adopcion, cancelada);
+}
+
+// Momento de la visita en hora local: la fecha es el día (guardado a medianoche UTC) y la hora "HH:MM".
+// Las visitas antiguas sin hora comienzan a las 00:00
+function inicioVisita(visita) {
+  const [horas, minutos] = (visita.hora ?? '00:00').split(':').map(Number);
+  const dia = visita.fecha;
+  return new Date(dia.getUTCFullYear(), dia.getUTCMonth(), dia.getUTCDate(), horas, minutos);
+}
+
+// Cuando llega la hora de la visita, el encargado registra cómo encontró al animal.
+// Solo se registra una visita agendada (no cancelada ni ya registrada) cuya hora ya llegó
+export async function registrarResultadoVisita(adopcionId, visitaId, data) {
+  const visita = await prisma.visitaAdopcion.findFirst({ where: { id: visitaId, adopcionId } });
+  if (!visita) throw new AppError(404, 'Visita no encontrada');
+  if (visita.estado === 'CANCELADA') throw new AppError(409, 'La visita está cancelada');
+  if (visita.estado === 'REALIZADA') throw new AppError(409, 'El resultado de esta visita ya fue registrado');
+  if (new Date() < inicioVisita(visita)) {
+    const cuando = visita.hora ? `${formatearDia(visita.fecha)} a las ${visita.hora}` : formatearDia(visita.fecha);
+    throw new AppError(409, `El resultado se puede registrar desde la hora de la visita (${cuando})`);
+  }
+
+  return prisma.visitaAdopcion.update({
+    where: { id: visitaId },
+    data: { ...data, estado: 'REALIZADA' },
+  });
+}
+
+// Después de registrar el resultado de una visita, si el hogar no reúne las condiciones,
+// el encargado rechaza la adopción: queda RECHAZADA con las observaciones de la visita como motivo,
+// el animal vuelve al refugio disponible para adopción, se cancelan las visitas pendientes
+// y se avisa al adoptante por correo
+export async function rechazarAdopcionTrasVisita(adopcionId, visitaId) {
+  const { visita, adopcion } = await prisma.$transaction(async (tx) => {
+    const visita = await tx.visitaAdopcion.findFirst({
+      where: { id: visitaId, adopcionId },
+      include: { adopcion: { select: { ...DATOS_AVISO_VISITA, estado: true, animalId: true } } },
+    });
+    if (!visita) throw new AppError(404, 'Visita no encontrada');
+    if (visita.estado !== 'REALIZADA') {
+      throw new AppError(409, 'Primero registre el resultado de la visita');
+    }
+    if (visita.adopcion.estado !== 'APROBADA') {
+      throw new AppError(409, 'Solo se puede rechazar una adopción aprobada');
+    }
+
+    const motivo = `Adopción rechazada tras la visita del ${formatearDia(visita.fecha)}: ${visita.observaciones}`;
+    await tx.adopcion.update({ where: { id: adopcionId }, data: { estado: 'RECHAZADA', observaciones: motivo } });
+
+    // El animal vuelve al refugio y queda disponible para una nueva adopción
+    await tx.animal.update({
+      where: { id: visita.adopcion.animalId },
+      data: { estado: 'EN_ADOPCION', fechaEgreso: null, motivoEgreso: null },
+    });
+
+    // Las visitas que quedaban agendadas ya no se harán
+    await tx.visitaAdopcion.updateMany({
+      where: { adopcionId, estado: 'AGENDADA' },
+      data: { estado: 'CANCELADA' },
+    });
+
+    return { visita, adopcion: { ...visita.adopcion, observaciones: visita.observaciones } };
+  }, TX_OPCIONES);
+
+  // Si el correo falla, el rechazo igual queda guardado; el encargado ve el aviso
+  try {
+    await enviarAdopcionRechazadaTrasVisita(adopcion, visita);
+    return { adopcionId, correoEnviado: true };
+  } catch (error) {
+    console.error('No se pudo enviar el correo del rechazo:', error.message);
+    return { adopcionId, correoEnviado: false };
   }
 }
