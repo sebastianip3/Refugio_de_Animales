@@ -15,9 +15,11 @@ export const TIPOS_REGISTRO_CLINICO = [
 export const VETERINARIOS = ['JAMES_HERRIOT', 'KAREN_BECKER', 'FRANCISCA_GONZALEZ'];
 
 // Campos que solo se llenan "cuando corresponde": un texto vacío se guarda como null
-function textoOpcional(maximo) {
-  const texto = maximo ? z.string().trim().max(maximo) : z.string().trim();
-  return texto
+function textoOpcional(maximo, nombre) {
+  return z
+    .string()
+    .trim()
+    .max(maximo, `${nombre} no puede superar los ${maximo} caracteres`)
     .nullish()
     .transform((valor) => (valor === '' ? null : valor));
 }
@@ -28,11 +30,15 @@ export const registroClinicoSchema = z.object({
     .date({ error: 'Fecha inválida o faltante' })
     .refine((fecha) => fecha <= new Date(), 'La fecha no puede ser futura'),
   tipo: z.enum(TIPOS_REGISTRO_CLINICO),
-  descripcion: z.string().trim().min(3).max(2000),
-  diagnostico: textoOpcional(2000),
-  tratamiento: textoOpcional(2000),
+  descripcion: z
+    .string()
+    .trim()
+    .min(3, 'La descripción debe tener al menos 3 caracteres')
+    .max(200, 'La descripción no puede superar los 200 caracteres'),
+  diagnostico: textoOpcional(100, 'El diagnóstico'),
+  tratamiento: textoOpcional(150, 'El tratamiento'),
   veterinario: z.enum(VETERINARIOS, { error: 'Debe seleccionar el veterinario responsable' }),
-  observaciones: textoOpcional(2000),
+  observaciones: textoOpcional(200, 'Las observaciones'),
 });
 
 // Actualización: se envían solo los campos que cambian, pero al menos uno

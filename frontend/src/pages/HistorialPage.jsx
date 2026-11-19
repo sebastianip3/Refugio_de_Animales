@@ -16,7 +16,7 @@ const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleDateString("es-CL", { timeZone: "UTC" });
 
 const nombreAnimal = (animal) =>
-  `${animal.nombre || "Sin nombre"} (#${animal.id}, ${animal.especie?.nombre ?? "?"})`;
+  `${animal.nombre || "Sin nombre"} (${animal.especie?.nombre ?? "?"})`;
 
 const iconoAnimal = (animal) => (animal.especie?.nombre === "Gato" ? "🐱" : "🐶");
 
@@ -62,9 +62,9 @@ const aFormulario = (registro) => ({
 
 // Campos opcionales del formulario (los que se llenan "cuando corresponde")
 const CAMPOS_TEXTO = [
-  { nombre: "diagnostico", etiqueta: "Diagnóstico" },
-  { nombre: "tratamiento", etiqueta: "Tratamiento" },
-  { nombre: "observaciones", etiqueta: "Observaciones adicionales" },
+  { nombre: "diagnostico", etiqueta: "Diagnóstico", maximo: 100 },
+  { nombre: "tratamiento", etiqueta: "Tratamiento", maximo: 150 },
+  { nombre: "observaciones", etiqueta: "Observaciones adicionales", maximo: 200 },
 ];
 
 // Detalles de un registro que se muestran solo si tienen valor
@@ -245,7 +245,7 @@ function HistorialPage({ cuenta }) {
 
   const texto = busqueda.trim().toLowerCase();
   const animalesFiltrados = animales.filter((animal) =>
-    `${animal.nombre ?? ""} ${animal.especie?.nombre ?? ""} ${animal.id}`.toLowerCase().includes(texto)
+    `${animal.nombre ?? ""} ${animal.especie?.nombre ?? ""}`.toLowerCase().includes(texto)
   );
 
   return (
@@ -281,7 +281,7 @@ function HistorialPage({ cuenta }) {
               type="search"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre, especie o ID..."
+              placeholder="Buscar por nombre o especie..."
               aria-label="Buscar mascota"
               className={`${claseCampo} sm:max-w-xs`}
             />
@@ -317,7 +317,6 @@ function HistorialPage({ cuenta }) {
                       <div className="min-w-0">
                         <p className="truncate font-semibold text-slate-900">
                           {animal.nombre || "Sin nombre"}
-                          <span className="ml-1.5 font-mono text-xs font-normal text-slate-400">#{animal.id}</span>
                         </p>
                         <p className="text-sm capitalize text-slate-500">
                           {animal.especie?.nombre} · {formatearEnum(animal.sexo)}
@@ -430,16 +429,17 @@ function HistorialPage({ cuenta }) {
                           )}
                         </div>
 
-                        <p className="mt-3 whitespace-pre-line text-slate-800">{registro.descripcion}</p>
+                        {/* break-words: un texto largo sin espacios se corta dentro de la tarjeta en vez de salirse */}
+                        <p className="mt-3 whitespace-pre-line break-words text-slate-800">{registro.descripcion}</p>
 
                         {detalles.length > 0 && (
                           <dl className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-3">
                             {detalles.map(({ campo, etiqueta }) => (
-                              <div key={campo}>
+                              <div key={campo} className="min-w-0">
                                 <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                                   {etiqueta}
                                 </dt>
-                                <dd className="mt-0.5 whitespace-pre-line text-sm text-slate-800">{registro[campo]}</dd>
+                                <dd className="mt-0.5 whitespace-pre-line break-words text-sm text-slate-800">{registro[campo]}</dd>
                               </div>
                             ))}
                           </dl>
@@ -513,10 +513,10 @@ function HistorialPage({ cuenta }) {
               </Campo>
 
               <Campo id="descripcion" label="Descripción" error={errors.descripcion} className="sm:col-span-2">
-                <textarea id="descripcion" rows={3} className={claseCampo} {...register("descripcion")} />
+                <textarea id="descripcion" rows={3} maxLength={200} className={claseCampo} {...register("descripcion")} />
               </Campo>
 
-              {CAMPOS_TEXTO.map(({ nombre, etiqueta }) => (
+              {CAMPOS_TEXTO.map(({ nombre, etiqueta, maximo }) => (
                 <Campo
                   key={nombre}
                   id={nombre}
@@ -525,7 +525,7 @@ function HistorialPage({ cuenta }) {
                   error={errors[nombre]}
                   className={nombre === "observaciones" ? "sm:col-span-2" : ""}
                 >
-                  <textarea id={nombre} rows={2} className={claseCampo} {...register(nombre)} />
+                  <textarea id={nombre} rows={2} maxLength={maximo} className={claseCampo} {...register(nombre)} />
                 </Campo>
               ))}
 

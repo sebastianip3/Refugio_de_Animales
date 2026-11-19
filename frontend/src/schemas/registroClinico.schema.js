@@ -48,12 +48,12 @@ export const registroClinicoFormSchema = z.object({
     .string()
     .trim()
     .min(3, "La descripción debe tener al menos 3 caracteres")
-    .max(2000, "La descripción no puede superar los 2000 caracteres"),
+    .max(200, "La descripción no puede superar los 200 caracteres"),
 
-  diagnostico: textoOpcional(2000, "El diagnóstico"),
-  tratamiento: textoOpcional(2000, "El tratamiento"),
+  diagnostico: textoOpcional(100, "El diagnóstico"),
+  tratamiento: textoOpcional(150, "El tratamiento"),
   veterinario: z.enum(Object.keys(VETERINARIOS), {
     error: "Seleccione el veterinario responsable",
   }),
-  observaciones: textoOpcional(2000, "Las observaciones"),
+  observaciones: textoOpcional(200, "Las observaciones"),
 });
