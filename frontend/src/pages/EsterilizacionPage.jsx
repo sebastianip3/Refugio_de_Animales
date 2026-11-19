@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { esterilizacionApi } from "../services/api.js";
 import { jornadaFormSchema } from "../schemas/esterilizacion.schema.js";
+import { COMUNAS } from "../schemas/adopcion.schema.js";
+import { object } from "zod";
 
 const estiloInput =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none";
@@ -14,11 +16,78 @@ const estiloBotonChico =
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" });
 
+// Texto que se muestra para cada valor que viene de la BD
+const ETIQUETA = {
+  CONFIRMADA: "Confirmada",
+  ASISTIO: "Asistió",
+  NO_ASISTIO: "No asistió",
+  CANCELADA: "Cancelada",
+  PENDIENTE: "Pendiente",
+  ENVIADO: "Enviado",
+  FALLIDO: "Fallido",
+  MACHO: "Macho",
+  HEMBRA: "Hembra",
+  PEQUENO: "Pequeño",
+  MEDIANO: "Mediano",
+  GRANDE: "Grande",
+};
+
+// Color de cada estado de inscripción
+const COLOR_ESTADO = {
+  CONFIRMADA: "bg-sky-100 text-sky-800",
+  ASISTIO: "bg-green-100 text-green-800",
+  NO_ASISTIO: "bg-yellow-100 text-yellow-800",
+  CANCELADA: "bg-red-100 text-red-700",
+};
+
 // El input datetime-local necesita "2026-12-01T10:00" en hora local
 const aFechaLocal = (fecha) => {
   const d = new Date(fecha);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
+};
+
+const UBICACIONES = {
+  "Concepción": {
+    "Estadio Ester Roa": "Collao",
+    "Parque Ecuador": "Centro",
+  },
+  "Coronel": {
+    "Estadio Federico Schwager": "Schwager",
+    "Plaza Cristo Redentor": "Camilo Olavarria",
+  },
+  "Chiguayante": {
+    "Plaza de Chiguayante": "Centro",
+    "Parque Costanera Chiguayante": "Costanera",
+  },
+  "Florida": {
+    "Plaza de Arma de Florida": "Centro",
+    "Skatepark Florida": "El Quillay",
+  },
+  "Hualqui": {
+    "Plaza de Armas de Hualqui": "Centro",
+    "Parque los jardines": "Santa Josefina",
+  },
+  "Lota": {
+    "Parque Isidora Cousiño": "Lota Alto",
+    "Plaza de Lota": "Lota Bajo",
+  },
+  "Penco": {
+    "Plaza de Penco": "Centro",
+    "Plaza de Lirquén": "Lirquén",
+  },
+  "San Pedro de la Paz": {
+    "Parque Laguna Grande": "Laguna Grande",
+    "Parque Violeta Parra": "Villa Icalma",
+  },
+  "Santa Juana": {
+    "Plaza de Santa Juana": "Centro",
+    "Fuerte de Santa Juana de Guadalcázar": "Centro",
+  },
+  "Talcahuano": {
+    "Estadio El Morro": "El Morro",
+    "Plaza de Armas de Talcahuano": "Centro",
+  },
 };
 
 function Campo({ id, etiqueta, error, children }) {
@@ -38,15 +107,21 @@ function FormularioJornada({ jornada, onGuardar, onCancelar }) {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(jornadaFormSchema),
     mode: "onTouched",
     defaultValues: jornada
-      ? { ...jornada, fecha: aFechaLocal(jornada.fecha), sector: jornada.sector ?? "" }
-      : { sector: "" },
+      ? { ...jornada, fecha: aFechaLocal(jornada.fecha)}
+      : { comuna: "", lugar: "", sector: "" },
   });
 
+  const comunaElegida = watch("comuna");
+  const lugarElegido = watch("lugar");
+  const lugaresComuna = UBICACIONES[comunaElegida] ?? {};
+  const sectorLugar = lugaresComuna[lugarElegido];
   return (
     <form
       onSubmit={handleSubmit(onGuardar)}
@@ -65,16 +140,33 @@ function FormularioJornada({ jornada, onGuardar, onCancelar }) {
         <input id="fecha" type="datetime-local" {...register("fecha")} className={estiloInput} />
       </Campo>
 
-      <Campo id="lugar" etiqueta="Lugar" error={errors.lugar}>
-        <input id="lugar" {...register("lugar")} className={estiloInput} />
+      <Campo id="comuna" etiqueta="Comuna" error={errors.comuna}>
+        <select id="comuna" {...register("comuna", {onChange: () => {
+          setValue("lugar", "");
+          setValue("sector", ""); }, })} 
+          className={estiloInput} >
+            <option value="">Seleccione una comuna</option>
+            {Object.values(COMUNAS).map((nombre) => (
+              <option key={nombre} value={nombre}>{nombre}</option>
+            ))}
+        </select>
       </Campo>
 
-      <Campo id="comuna" etiqueta="Comuna" error={errors.comuna}>
-        <input id="comuna" {...register("comuna")} className={estiloInput} />
+      <Campo id="lugar" etiqueta="Lugar" error={errors.lugar}>
+        <select id="lugar" disabled={!comunaElegida} {...register("lugar", {onChange: () =>
+          setValue("sector", "") })} className={estiloInput}>
+            <option value="">{comunaElegida ? "seleciona un lugar" : "Primero elija una Comuna"}</option>
+            {Object.keys(lugaresComuna).map((lugar) => (
+              <option key={lugar} value={lugar}>{lugar}</option>
+            ))}
+        </select>
       </Campo>
 
       <Campo id="sector" etiqueta="Sector" error={errors.sector}>
-        <input id="sector" {...register("sector")} className={estiloInput} />
+        <select id="sector" disabled={!sectorLugar} {...register("sector")} className={estiloInput} >
+              <option value="">{sectorLugar ? "Seleccione el sector" : "Primero elija un lugar"}</option>
+              {sectorLugar && <option value={sectorLugar}>{sectorLugar}</option>}
+        </select>
       </Campo>
 
       <Campo id="cuposTotales" etiqueta="Cupos totales" error={errors.cuposTotales}>
@@ -125,12 +217,24 @@ function ListaInscritos({ jornada, onCerrar }) {
   useEffect(cargarInscritos, [jornada.id]);
 
   // Marca asistencia o cancela, una vez cambiada ya no vuelve a CONFIRMADA
-  const cambiarEstado = async (id, estado) => {
+  const cambiarEstado = async (id, estado, select) => {
     setError("");
     setMensaje("");
+    const cambios = { estado };
+
+    if(estado === "CANCELADA") {
+      const motivo = window.prompt("Motivo de la cancelación (se enviará al tutor por correo): ");
+
+      if(motivo === null) {
+        select.value = "";
+        return
+      }
+      cambios.observaciones = motivo.trim() || null;
+    }
+
     try {
-      await esterilizacionApi.actualizarInscripcion(id, { estado });
-      setMensaje("Estado actualizado");
+      await esterilizacionApi.actualizarInscripcion(id, cambios);
+      setMensaje(estado === "CANCELADA" ? "Inscripción cancelada, se avisó al tutor por correo" : "Estado actualizado");
       cargarInscritos();
     } catch (err) {
       setError(err.message);
@@ -191,7 +295,7 @@ function ListaInscritos({ jornada, onCerrar }) {
                     </span>
                   </td>
                   <td className="py-2 pr-4">
-                    {inscrito.especie?.nombre} · {inscrito.sexo.toLowerCase()} · {inscrito.tamano.toLowerCase()}
+                    {inscrito.especie?.nombre} · {ETIQUETA[inscrito.sexo]} · {ETIQUETA[inscrito.tamano]}
                     <br />
                     <span className="text-slate-500">{inscrito.pesoEstimado} kg</span>
                   </td>
@@ -200,8 +304,8 @@ function ListaInscritos({ jornada, onCerrar }) {
                       <select
                         aria-label={`Estado de ${inscrito.codigoComprobante}`}
                         defaultValue=""
-                        onChange={(e) => cambiarEstado(inscrito.id, e.target.value)}
-                        className="rounded-md border border-slate-300 px-2 py-1"
+                        onChange={(e) => cambiarEstado(inscrito.id, e.target.value, e.target)}
+                        className={`rounded-md border border-sky-200 px-2 py-1 ${COLOR_ESTADO.CONFIRMADA}`}
                       >
                         <option value="" disabled>
                           Confirmada
@@ -211,11 +315,18 @@ function ListaInscritos({ jornada, onCerrar }) {
                         <option value="CANCELADA">Cancelar</option>
                       </select>
                     ) : (
-                      inscrito.estado.replace("_", " ").toLowerCase()
-                    )}
+                      <>
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${COLOR_ESTADO[inscrito.estado]}`}>
+                         {ETIQUETA[inscrito.estado]}
+                      </span>
+                      {inscrito.observaciones && (
+                        <p className="mt-2 text-xs text-slate-500">Motivo: {inscrito.observaciones}</p>
+                      )}
+                      </>
+                   )}
                   </td>
                   <td className="py-2 pr-4">
-                    {inscrito.estadoCorreo.toLowerCase()}
+                    {ETIQUETA[inscrito.estadoCorreo]}
                     {inscrito.estadoCorreo !== "ENVIADO" && inscrito.estado !== "CANCELADA" && (
                       <button
                         type="button"
@@ -289,7 +400,7 @@ function PanelJornadas() {
 
   const guardarJornada = async (datos) => {
     const ok = jornadaEditando
-      ? await ejecutar(() => esterilizacionApi.actualizarJornada(jornadaEditando.id, datos), "Jornada actualizada")
+      ? await ejecutar(() => esterilizacionApi.actualizarJornada(jornadaEditando.id, datos), "Jornada actualizada, Si cambio la fecha o el lugar, se avisó por correo a los inscritos")
       : await ejecutar(() => esterilizacionApi.crearJornada(datos), "Jornada creada (formulario cerrado)");
     if (ok) cerrarFormularioJornada();
   };
