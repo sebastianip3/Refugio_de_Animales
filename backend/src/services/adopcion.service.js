@@ -2,7 +2,12 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 import { ESTADOS_EN_PROCESO } from '../schema/adopcion.schema.js';
-import { enviarResultadoAdopcion, enviarAvisoVisita, enviarAdopcionRechazadaTrasVisita } from './correo.service.js';
+import {
+  enviarSolicitudRecibida,
+  enviarResultadoAdopcion,
+  enviarAvisoVisita,
+  enviarAdopcionRechazadaTrasVisita,
+} from './correo.service.js';
 
 // Serializable evita que dos solicitudes simultáneas pasen la verificación a la vez
 const TX_OPCIONES = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
@@ -40,9 +45,10 @@ export async function obtenerAdopcion(id) {
   return adopcion;
 }
 
-// Un animal adoptado o con una adopción en proceso no puede recibir otra solicitud
-export function crearAdopcion(data) {
-  return prisma.$transaction(async (tx) => {
+// Un animal adoptado o con una adopción en proceso no puede recibir otra solicitud.
+// Después de guardar se envía al adoptante un correo de confirmación
+export async function crearAdopcion(data) {
+  const adopcion = await prisma.$transaction(async (tx) => {
     const animal = await tx.animal.findUnique({ where: { id: data.animalId } });
     if (!animal) throw new AppError(404, 'Animal no encontrado');
     if (animal.estado === 'ADOPTADO') throw new AppError(409, 'El animal ya fue adoptado');
@@ -65,8 +71,49 @@ export function crearAdopcion(data) {
       );
     }
 
-    return tx.adopcion.create({ data, include: { animal: true } });
+    return tx.adopcion.create({ data, include: INCLUDE_ANIMAL });
   }, TX_OPCIONES);
+
+  // Si el correo falla, la solicitud igual queda guardada; el formulario avisa al adoptante
+  try {
+    await enviarSolicitudRecibida(adopcion);
+    return { ...adopcion, correoEnviado: true };
+  } catch (error) {
+    console.error('No se pudo enviar el correo de solicitud recibida:', error.message);
+    return { ...adopcion, correoEnviado: false };
+  }
+}
+
+// Pública: el adoptante consulta sus solicitudes con su RUT y su correo.
+// Se piden los dos juntos para que nadie pueda ver solicitudes ajenas sabiendo solo un RUT.
+// Solo se devuelven datos para el adoptante, no las notas internas del encargado
+export async function consultarSolicitudes(rut, email) {
+  const adopciones = await prisma.adopcion.findMany({
+    where: { rut, email },
+    select: {
+      fechaSolicitud: true,
+      estado: true,
+      observaciones: true,
+      animal: {
+        select: { nombre: true, fotografiaUrl: true, sexo: true, especie: { select: { nombre: true } } },
+      },
+      // Próxima visita de seguimiento agendada, si hay
+      visitas: {
+        where: { estado: 'AGENDADA', fecha: { gte: diaUtc(new Date()) } },
+        select: { fecha: true, hora: true },
+        orderBy: [{ fecha: 'asc' }, { hora: 'asc' }],
+        take: 1,
+      },
+    },
+    orderBy: { fechaSolicitud: 'desc' },
+  });
+
+  return adopciones.map(({ observaciones, visitas, ...adopcion }) => ({
+    ...adopcion,
+    // El motivo solo se muestra si fue rechazada (es el mismo que se envió por correo)
+    motivoRechazo: adopcion.estado === 'RECHAZADA' ? observaciones : null,
+    proximaVisita: visitas[0] ?? null,
+  }));
 }
 
 // Solo se puede cambiar el estado mientras la adopción está en proceso.

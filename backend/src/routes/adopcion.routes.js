@@ -4,6 +4,7 @@ import {
   listarAnimalesEnProceso,
   obtenerAdopcion,
   crearAdopcion,
+  consultarSolicitudes,
   actualizarAdopcion,
   listarProximasVisitas,
   listarVisitas,
@@ -22,6 +23,8 @@ const soloEncargado = [autenticar, autorizar('ENCARGADO_ADOPCIONES', 'ADMINISTRA
 // Públicas: cualquier adoptante puede enviar la ficha
 router.get('/animales-en-proceso', listarAnimalesEnProceso);
 router.post('/', crearAdopcion);
+// El adoptante consulta el estado de sus solicitudes con su RUT y su correo
+router.post('/consultar', consultarSolicitudes);
 
 // Antes de /:id para que "visitas" no se lea como un ID
 router.get('/visitas/proximas', soloEncargado, listarProximasVisitas);

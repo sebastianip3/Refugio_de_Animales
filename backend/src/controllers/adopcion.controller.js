@@ -4,6 +4,7 @@ import * as adopcionService from '../services/adopcion.service.js';
 import { AppError } from '../utils/app-error.js';
 import {
   adopcionSchema,
+  consultaSolicitudSchema,
   updateAdopcionSchema,
   visitaSchema,
   resultadoVisitaSchema,
@@ -83,6 +84,17 @@ export async function crearAdopcion(req, res) {
     const data = adopcionSchema.parse(req.body);
     const adopcion = await adopcionService.crearAdopcion(data);
     res.status(201).json(adopcion);
+  } catch (error) {
+    manejarError(res, error);
+  }
+}
+
+// POST /adopciones/consultar { rut, email }. Es POST para que el RUT no quede en la URL
+export async function consultarSolicitudes(req, res) {
+  try {
+    const { rut, email } = consultaSolicitudSchema.parse(req.body);
+    const solicitudes = await adopcionService.consultarSolicitudes(rut, email);
+    res.json(solicitudes);
   } catch (error) {
     manejarError(res, error);
   }

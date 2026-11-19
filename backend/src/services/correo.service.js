@@ -67,6 +67,35 @@ export async function enviarComprobanteInscripcion(inscripcion) {
   });
 }
 
+// Confirma al adoptante que su solicitud de adopción fue recibida.
+// adopcion debe venir con { animal } incluido
+export function enviarSolicitudRecibida(adopcion) {
+  const nombreAnimal = adopcion.animal?.nombre || 'la mascota';
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: adopcion.email,
+    subject: `Recibimos tu solicitud para adoptar a ${nombreAnimal}`,
+    text: [
+      `Hola ${adopcion.nombre}, recibimos tu solicitud para adoptar a ${nombreAnimal}.`,
+      'Nuestro equipo la revisará y te avisaremos por correo cuando sea aprobada o rechazada.',
+      '',
+      'Mientras tanto, puedes consultar el estado de tu solicitud en la página de Adopciones con tu RUT y este correo.',
+      '',
+      'Gracias por querer darle un hogar a un animal.',
+      'Refugio de Animales',
+    ].join('\n'),
+    html: `
+      <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, recibimos tu solicitud para adoptar a <strong>${escaparHtml(nombreAnimal)}</strong>.</p>
+      <p>Nuestro equipo la revisará y te avisaremos por correo cuando sea <strong>aprobada o rechazada</strong>.</p>
+      <p>Mientras tanto, puedes consultar el estado de tu solicitud en la página de <strong>Adopciones</strong> con tu RUT y este correo.</p>
+      <p>Gracias por querer darle un hogar a un animal.</p>
+      ${FOTO_CORREO}
+    `,
+    attachments: [FOTO_REFUGIO],
+  });
+}
+
 // Avisa al adoptante si su solicitud fue aprobada o rechazada.
 // adopcion debe venir con { animal } incluido
 export async function enviarResultadoAdopcion(adopcion) {
@@ -109,7 +138,9 @@ export async function enviarResultadoAdopcion(adopcion) {
     to: adopcion.email,
     subject: asunto,
     text: [...lineas, '', 'Gracias por querer darle un hogar a un animal.', 'Refugio de Animales'].join('\n'),
-    html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.<br>Refugio de Animales</p>`,
+    // El logo va al final y ya incluye la firma "Refugio de Animales"
+    html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.</p>${FOTO_CORREO}`,
+    attachments: [FOTO_REFUGIO],
   });
 }
 
@@ -145,11 +176,13 @@ export function enviarAvisoVisita(adopcion, visita) {
     ? `
       <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, te informamos que la visita de seguimiento de <strong>${escaparHtml(nombreAnimal)}</strong> agendada para el <strong>${fecha}</strong> fue <strong>cancelada</strong>.</p>
       <p>Si corresponde, te avisaremos cuando agendemos una nueva fecha.</p>
+      ${FOTO_CORREO}
     `
     : `
       <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, agendamos una visita de seguimiento para ver cómo está <strong>${escaparHtml(nombreAnimal)}</strong> en su nuevo hogar.</p>
       <p><strong>Fecha y hora de la visita:</strong> ${fecha}</p>
       <p>Si no puedes recibirnos ese día, responde este correo para coordinar otra fecha.</p>
+      ${FOTO_CORREO}
     `;
 
   return transporter.sendMail({
@@ -157,7 +190,8 @@ export function enviarAvisoVisita(adopcion, visita) {
     to: adopcion.email,
     subject: asunto,
     text: [...texto, '', 'Refugio de Animales'].join('\n'),
-    html: `${html}<p>Refugio de Animales</p>`,
+    html,
+    attachments: [FOTO_REFUGIO],
   });
 }
 
@@ -188,8 +222,9 @@ export function enviarAdopcionRechazadaTrasVisita(adopcion, visita) {
       <h3>Motivo</h3>
       <p>${escaparHtml(adopcion.observaciones).replace(/\n/g, '<br>')}</p>
       <p>Nos pondremos en contacto contigo para coordinar el retiro.</p>
-      <p>Refugio de Animales</p>
+      ${FOTO_CORREO}
     `,
+    attachments: [FOTO_REFUGIO],
   });
 }
 

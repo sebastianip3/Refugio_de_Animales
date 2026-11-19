@@ -71,7 +71,13 @@ export const telefonoSchema = z
 // Ficha que llena el adoptante. El estado no se recibe: siempre parte en PENDIENTE
 export const adopcionSchema = z.object({
   animalId: z.number().int().positive(),
-  nombre: z.string().trim().min(2).max(57, 'El nombre no puede superar los 57 caracteres'),
+  nombre: z
+    .string()
+    .trim()
+    .min(2)
+    .max(57, 'El nombre no puede superar los 57 caracteres')
+    // Solo letras (con tildes, ñ y ü), espacios y apóstrofo (O'Higgins): sin números ni otros caracteres especiales
+    .regex(/^[\p{L} '’]+$/u, "El nombre solo puede tener letras, espacios y apóstrofo ('), sin números ni otros caracteres especiales"),
   rut: rutSchema,
   email: correoSchema,
   telefono: telefonoSchema,
@@ -84,6 +90,12 @@ export const adopcionSchema = z.object({
   tipoVivienda: z.enum(TIPOS_VIVIENDA, { error: 'Tipo de vivienda inválido' }).nullish(),
   otrasMascotas: z.string().trim().max(200, 'Otras mascotas no puede superar los 200 caracteres').nullish(),
   motivo: z.string().trim().max(300, 'El motivo no puede superar los 300 caracteres').nullish(),
+});
+
+// Consulta pública del estado de las solicitudes: se piden el RUT y el correo juntos
+export const consultaSolicitudSchema = z.object({
+  rut: rutSchema,
+  email: correoSchema,
 });
 
 // Revisión de la solicitud por parte del refugio
