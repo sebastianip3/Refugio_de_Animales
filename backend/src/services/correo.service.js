@@ -121,7 +121,7 @@ export async function enviarCambiosJornada(inscripcion, jornada, cambios) {
     to: inscripcion.tutorEmail,
     subject: `Cambios en la jornada: ${jornada.nombre}`,
     text: [
-      `Hola ${inscripcion.nombre}, la jornada de esterilización en las que estas incrito tuvo cambios: `, 
+      `Hola ${inscripcion.tutorNombre}, la jornada de esterilización en las que estas incrito tuvo cambios: `, 
       ...cambios,
       '',
       `tu folio ${inscripcion.codigoComprobante} sigue siendo válido. Adjuntamos tu comprobante actualizado. `,
@@ -143,4 +143,33 @@ export async function enviarCambiosJornada(inscripcion, jornada, cambios) {
         },
       ],
   });
+}
+
+export async function enviarCancelacionInscripcion(inscripcion) {
+  const { jornada } = inscripcion;
+  const motivo = inscripcion.observaciones
+  ? `<p><strong>Motivo:</strong> ${escaparHtml(inscripcion.observaciones)}</p>`
+  : '';
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: inscripcion.tutorEmail,
+    subject: `Inscripción cancelada: ${jornada.nombre}`,
+    text: [
+      `Hola ${inscripcion.tutorNombre}, tu inscripción (folio ${inscripcion.codigoComprobante})`,
+      `a la jornada "${jornada.nombre}" del ${formatearFecha(jornada.fecha)} fue cancelada`,
+      inscripcion.observaciones ? `Motivo: ${inscripcion.observaciones}` : '',
+      '',
+      'Sí crees que es un error, contacta al refugio indicando tu folio.',
+    ].join('\n'),
+    html:`
+    <p>Hola <strong>${escaparHtml(inscripcion.tutorNombre)}</strong>, tu inscripción
+    (folio <strong>${inscripcion.codigoComprobante}</strong>) a la jornada
+    <strong>${escaparHtml(jornada.nombre)}</strong> del ${formatearFecha(jornada.fecha)} fue <strong>cancelada</strong>.</p>
+    ${motivo}
+    <p>Si crees que es un error, contacta al refugio indicando tu folio.</p>
+    ${FOTO_CORREO}
+    `,
+    attachments: [FOTO_REFUGIO],
+   });
 }
