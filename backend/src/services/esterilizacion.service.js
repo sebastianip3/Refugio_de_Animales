@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
-import { enviarComprobanteInscripcion, enviarCambiosJornada } from './correo.service.js';
+import { enviarComprobanteInscripcion, enviarCambiosJornada, enviarCancelacionInscripcion } from './correo.service.js';
 import { formatearFecha } from '../utils/comprobantePdf.js';
 
 // Cuenta cuantas personas ocupan cupo en una jornada, las inscripciones canceladas no ocupan cupo
@@ -264,11 +264,20 @@ export async function actualizarInscripcion(id, data) {
     throw new AppError(409, `La inscripción ya está ${actual.estado} y no puede cambiar de estado`);
   }
 
-  return prisma.inscripcionEsterilizacion.update({
+  const inscripcion = await prisma.inscripcionEsterilizacion.update({
     where: { id: id },
     data: data,
     include: { especie: true, jornada: true },
   });
+
+  if(data.estado === 'CANCELADA' && actual.estado !== 'CANCELADA') {
+    try{
+      await enviarCancelacionInscripcion(inscripcion);
+    }catch (error) {
+      console.error('No se pudo avisar la cancelación:', error.message);
+    }
+  }
+  return inscripcion;
 }
 
 // la administradora reenvia el correo si falló o el tutor no lo recibió
