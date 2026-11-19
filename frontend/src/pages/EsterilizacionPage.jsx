@@ -217,12 +217,24 @@ function ListaInscritos({ jornada, onCerrar }) {
   useEffect(cargarInscritos, [jornada.id]);
 
   // Marca asistencia o cancela, una vez cambiada ya no vuelve a CONFIRMADA
-  const cambiarEstado = async (id, estado) => {
+  const cambiarEstado = async (id, estado, select) => {
     setError("");
     setMensaje("");
+    const cambios = { estado };
+
+    if(estado === "CANCELADA") {
+      const motivo = window.prompt("Motivo de la cancelación (se enviará al tutor por correo): ");
+
+      if(motivo === null) {
+        select.value = "";
+        return
+      }
+      cambios.observaciones = motivo.trim() || null;
+    }
+
     try {
-      await esterilizacionApi.actualizarInscripcion(id, { estado });
-      setMensaje("Estado actualizado");
+      await esterilizacionApi.actualizarInscripcion(id, cambios);
+      setMensaje(estado === "CANCELADA" ? "Inscripción cancelada, se avisó al tutor por correo" : "Estado actualizado");
       cargarInscritos();
     } catch (err) {
       setError(err.message);
@@ -292,7 +304,7 @@ function ListaInscritos({ jornada, onCerrar }) {
                       <select
                         aria-label={`Estado de ${inscrito.codigoComprobante}`}
                         defaultValue=""
-                        onChange={(e) => cambiarEstado(inscrito.id, e.target.value)}
+                        onChange={(e) => cambiarEstado(inscrito.id, e.target.value, e.target)}
                         className={`rounded-md border border-sky-200 px-2 py-1 ${COLOR_ESTADO.CONFIRMADA}`}
                       >
                         <option value="" disabled>
@@ -303,9 +315,14 @@ function ListaInscritos({ jornada, onCerrar }) {
                         <option value="CANCELADA">Cancelar</option>
                       </select>
                     ) : (
+                      <>
                       <span className={`rounded-full px-3 py-1 text-xs font-medium ${COLOR_ESTADO[inscrito.estado]}`}>
                          {ETIQUETA[inscrito.estado]}
                       </span>
+                      {inscrito.observaciones && (
+                        <p className="mt-2 text-xs text-slate-500">Motivo: {inscrito.observaciones}</p>
+                      )}
+                      </>
                    )}
                   </td>
                   <td className="py-2 pr-4">
