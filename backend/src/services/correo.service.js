@@ -112,3 +112,35 @@ export async function enviarResultadoAdopcion(adopcion) {
     html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.<br>Refugio de Animales</p>`,
   });
 }
+
+export async function enviarCambiosJornada(inscripcion, jornada, cambios) {
+  const pdf = await generarComprobantePdf({ ...inscripcion, jornada});
+
+  return transporter.sendMail({
+    from: REMITENTE,
+    to: inscripcion.tutorEmail,
+    subject: `Cambios en la jornada: ${jornada.nombre}`,
+    text: [
+      `Hola ${inscripcion.nombre}, la jornada de esterilización en las que estas incrito tuvo cambios: `, 
+      ...cambios,
+      '',
+      `tu folio ${inscripcion.codigoComprobante} sigue siendo válido. Adjuntamos tu comprobante actualizado. `,
+    ].join('\n'),
+    html: `
+      <p>Hola <strong>${escaparHtml(inscripcion.tutorNombre)}</strong>, la jornada
+      <strong>${escaparHtml(jornada.nombre)}</strong> tuvo cambios:</p>
+      <ul>${cambios.map((c) => `<li>${escaparHtml(c)}</li>`).join('')}</ul>
+      <p>Tu folio <strong>${inscripcion.codigoComprobante}</strong> sigue siendo válido.
+      Adjuntamos tu comprobante actualizado.</p>
+      ${FOTO_CORREO}
+      `,
+      attachments: [
+        FOTO_REFUGIO,
+        {
+          filename: `comprobante-${inscripcion.codigoComprobante}.pdf`,
+          content: pdf,
+          contentType: 'application/pdf',
+        },
+      ],
+  });
+}
