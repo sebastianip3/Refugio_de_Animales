@@ -67,6 +67,16 @@ const CAMPOS_TEXTO = [
   { nombre: "observaciones", etiqueta: "Observaciones adicionales", maximo: 200 },
 ];
 
+// Color de la etiqueta del estado de cada animal (enum EstadoAnimal del backend)
+const ESTILO_ESTADO_ANIMAL = {
+  EN_EVALUACION: "bg-sky-50 text-sky-700 ring-sky-200",
+  CUARENTENA: "bg-amber-50 text-amber-700 ring-amber-200",
+  EN_TRATAMIENTO: "bg-rose-50 text-rose-700 ring-rose-200",
+  EN_ADOPCION: "bg-violet-50 text-violet-700 ring-violet-200",
+  ADOPTADO: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  OTRO: "bg-slate-100 text-slate-600 ring-slate-200",
+};
+
 // Detalles de un registro que se muestran solo si tienen valor
 const DETALLES_REGISTRO = [
   { campo: "diagnostico", etiqueta: "Diagnóstico" },
@@ -324,7 +334,11 @@ function HistorialPage({ cuenta }) {
                       </div>
                     </div>
 
-                    <span className="mt-3 inline-flex w-fit rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium capitalize text-slate-600">
+                    <span
+                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
+                        ESTILO_ESTADO_ANIMAL[animal.estado] ?? ESTILO_ESTADO_ANIMAL.OTRO
+                      }`}
+                    >
                       {formatearEnum(animal.estado)}
                     </span>
 
