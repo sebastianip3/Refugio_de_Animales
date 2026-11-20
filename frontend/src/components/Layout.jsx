@@ -86,7 +86,9 @@ function Layout({ children, paginaActual, onNavegar, cuenta, onCerrarSesion, onI
             py: 2,
           }}
         >
-          {SECCIONES.map((seccion) => (
+          {SECCIONES.filter(
+            (seccion) => seccion.id !== "trabajadores" || cuenta?.tipo === "ADMINISTRADOR",
+          ).map((seccion) => (
             <ListItemButton
               key={seccion.id}
               selected={paginaActual === seccion.id}

@@ -63,6 +63,11 @@ export const cuentasApi = {
   crearVoluntario: (datos) =>
     request("/cuentas/voluntarios", { method: "POST", body: JSON.stringify(datos) }),
   eliminarVoluntario: (id) => request(`/cuentas/${id}`, { method: "DELETE" }),
+  listarTrabajadores: () => request("/cuentas/trabajadores"),
+  crearTrabajador: (datos) =>
+    request("/cuentas/trabajadores", { method: "POST", body: JSON.stringify(datos) }),
+  actualizarTrabajador: (id, datos) =>
+    request(`/cuentas/trabajadores/${id}`, { method: "PATCH", body: JSON.stringify(datos) }),
   obtenerCalendarioVoluntariado: () => request("/cuentas/voluntarios/calendario"),
   guardarDisponibilidadVoluntario: (id, bloques) =>
     request(`/cuentas/voluntarios/${id}/disponibilidad`, {

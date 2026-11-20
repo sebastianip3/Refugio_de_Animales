@@ -10,6 +10,7 @@ import InsumosPage from "./pages/InsumosPage.jsx";
 import PerfilPage from "./pages/PerfilPage.jsx";
 import InscripcionEsterilizacionPage from "./pages/inscripcionEsterilizacionPage.jsx";
 import VoluntariadoPage from "./pages/VoluntariadoPage.jsx";
+import TrabajadoresPage from "./pages/TrabajadoresPage.jsx";
 import Layout from "./components/Layout.jsx";
 import { cuentasApi, EVENTO_SESION_CERRADA } from "./services/api.js";
 import EsterilizacionPage from "./pages/EsterilizacionPage.jsx";
@@ -22,6 +23,7 @@ const PAGINAS = {
   cuidados: CuidadosPage,
   insumos: InsumosPage,
   voluntariado: VoluntariadoPage,
+  trabajadores: TrabajadoresPage,
   perfil: PerfilPage,
   esterilizacion: EsterilizacionPage,
 };
