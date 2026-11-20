@@ -30,6 +30,27 @@ export const crearVoluntarioSchema = z.object({
   disponibleCuidado: z.boolean().default(true),
 });
 
+export const actualizarTrabajadorSchema = z.object({
+  nombre: z.string().trim().min(1).max(100),
+  apellido: z.string().trim().min(1).max(100),
+  correo: correoSchema,
+  tipo: z.enum(['TRABAJADOR', 'ENCARGADO_ADOPCIONES', 'VETERINARIO']),
+  horario: z.string().trim().max(255).optional().transform((valor) => valor || null),
+});
+
+export const crearTrabajadorSchema = z.object({
+  nombre: z.string().trim().min(1).max(100),
+  apellido: z.string().trim().min(1).max(100),
+  correo: correoSchema,
+  contrasena: z.string().min(8).max(72),
+  tipo: z.enum(['TRABAJADOR', 'ENCARGADO_ADOPCIONES', 'VETERINARIO']),
+  horario: z.string().trim().max(255).optional().transform((valor) => valor || null),
+});
+
+export const idTrabajadorSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 export const bloqueHorarioSchema = z.object({
   diaSemana: z.number().int().min(0).max(6),
   hora: z.number().int().min(8).max(19),
