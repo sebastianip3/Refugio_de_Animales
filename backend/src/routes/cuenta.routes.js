@@ -6,6 +6,9 @@ import {
   cambiarCorreo,
   cambiarDisponibilidadCuidado,
   listarVoluntarios,
+  listarTrabajadores,
+  crearTrabajador,
+  actualizarTrabajador,
   crearVoluntario,
   eliminarVoluntario,
   obtenerCalendarioVoluntariado,
@@ -47,6 +50,9 @@ router.patch('/disponibilidad-cuidado', autenticar, cambiarDisponibilidadCuidado
 router.get('/voluntarios/calendario', autenticarVoluntariado, obtenerCalendarioVoluntariado);
 router.put('/voluntarios/:id/disponibilidad', autenticarVoluntariado, actualizarDisponibilidadHoraria);
 router.get('/voluntarios', autenticarVoluntariado, listarVoluntarios);
+router.get('/trabajadores', autenticar, autorizar('ADMINISTRADOR'), listarTrabajadores);
+router.post('/trabajadores', autenticar, autorizar('ADMINISTRADOR'), crearTrabajador);
+router.patch('/trabajadores/:id', autenticar, autorizar('ADMINISTRADOR'), actualizarTrabajador);
 router.post('/voluntarios', autenticar, autorizar('ADMINISTRADOR'), crearVoluntario);
 router.delete('/:id', autenticar, autorizar('ADMINISTRADOR'), eliminarVoluntario);
 
