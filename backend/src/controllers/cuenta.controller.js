@@ -7,6 +7,9 @@ import {
   cambiarDisponibilidadCuidadoSchema,
   cambiarCorreoCuentaSchema,
   crearVoluntarioSchema,
+  actualizarTrabajadorSchema,
+  crearTrabajadorSchema,
+  idTrabajadorSchema,
   idVoluntarioSchema,
   loginCuentaSchema,
 } from '../schema/cuenta.schema.js';
@@ -94,6 +97,36 @@ export async function listarVoluntarios(req, res) {
   try {
     const voluntarios = await cuentaService.listarVoluntarios();
     return res.json(voluntarios);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function listarTrabajadores(req, res) {
+  try {
+    const trabajadores = await cuentaService.listarTrabajadores();
+    return res.json(trabajadores);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function crearTrabajador(req, res) {
+  try {
+    const datos = crearTrabajadorSchema.parse(req.body);
+    const trabajador = await cuentaService.crearTrabajador(datos);
+    return res.status(201).json(trabajador);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
+export async function actualizarTrabajador(req, res) {
+  try {
+    const { id } = idTrabajadorSchema.parse(req.params);
+    const datos = actualizarTrabajadorSchema.parse(req.body);
+    const trabajador = await cuentaService.actualizarTrabajador(id, datos);
+    return res.json(trabajador);
   } catch (error) {
     return manejarErrorCuenta(res, error);
   }
