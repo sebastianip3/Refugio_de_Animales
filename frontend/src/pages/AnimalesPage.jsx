@@ -186,6 +186,12 @@ function AnimalesPage() {
     const especieElegida = especies.find((especie) => String(especie.id) === String(formulario.especieId));
     const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
 
+    const MaxCambioSexo = 2;
+    const animalEditando = animales.find((animal) => animal.id === editandoId);
+    const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
+    const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MaxCambioSexo;
+    const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
+
   return (
     <section className="min-h-screen bg-emerald-50 p-6">
       <div className="mx-auto max-w-6xl">
@@ -254,14 +260,23 @@ function AnimalesPage() {
                 name="sexo"
                 value={formulario.sexo}
                 onChange={handleChange}
-                className={`${estiloCampo} capitalize`}
+                disabled={sexoBloqueado}
+                className={`${estiloCampo} capitalize disabled:bg-slate-100 disabled:text-slate-500`}
               >
-                {SEXOS.map((sexo) => (
+                {opcionesSexo.map((sexo) => (
                   <option key={sexo} value={sexo}>
                     {formatearEnum(sexo)}
                   </option>
                 ))}
               </select>
+              {animalEditando && (
+                <p className="mt-1 text-xs text-slate-500">
+                   {sexoBloqueado
+                    ? "Ya se corrigió 2 veces, no se puede modificar"
+                    : `Te quedan ${MaxCambioSexo - animalEditando.cambioSexo} de ${MaxCambioSexo} correcciones de sexo`}
+                  {!sexoDefinido && " (definirlo por primera vez no gasta intentos)"}
+                </p>
+              )}
             </div>
 
             <div>
