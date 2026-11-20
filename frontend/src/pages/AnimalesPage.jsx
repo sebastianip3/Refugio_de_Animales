@@ -235,7 +235,8 @@ function AnimalesPage() {
                 value={formulario.especieId}
                 onChange={handleChange}
                 required
-                className={estiloCampo}
+                disabled={Boolean(editandoId)}
+                className={`${estiloCampo} disabled:bg-slate-100 disabled:text-slate-500`}
               >
                 <option value="">Seleccione una especie</option>
                 {especies.map((especie) => (
