@@ -53,6 +53,24 @@ export async function actualizarAnimal(id, data) {
   }
 
   const especieId = data.especieId ?? actual.especieId;
+
+  const MaxCambioSexo = 2;
+  
+if (data.sexo && data.sexo !== actual.sexo) {
+    // una vez definido no puede volver a desconocido 
+    if (data.sexo === 'DESCONOCIDO') {
+      throw new AppError(409, 'Un animal con sexo ya definido no puede volver a desconocido');
+    }
+
+    // solo cuenta si ya tenía sexo definido 
+    if (actual.sexo !== 'DESCONOCIDO') {
+      if (actual.cambioSexo >= MaxCambioSexo) {
+        throw new AppError(409, `El sexo ya se corrigió ${MaxCambioSexo} veces y no se puede volver a cambiar`);
+      }
+      data.cambioSexo = actual.cambioSexo + 1;
+    }
+  }
+
   const fechaNacimiento = data.fechaNacimiento !== undefined ? data.fechaNacimiento : actual.fechaNacimiento;
   await validarFechaNacimiento(especieId, fechaNacimiento);
 
