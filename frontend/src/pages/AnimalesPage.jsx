@@ -15,7 +15,7 @@ const FORMULARIO_VACIO = {
   nombre: "",
   especieId: "",
   sexo: "DESCONOCIDO",
-  edadEstimada: "",
+  fechaNacimiento: "",
   peso: "",
   estado: "EN_EVALUACION",
   tieneChip: false,
@@ -27,6 +27,21 @@ const FORMULARIO_VACIO = {
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
 
+const hoy = new Date().toLocaleDateString("en-CA");
+
+const formatearFecha = (fecha) => (fecha ? fecha.slice(0,10).split("-").reverse().join("-") : "-");
+
+const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
+
+function fechaMinimaNacimiento(nombreEspecie) {
+  const edadMaxima = EDAD_MAXIMA[nombreEspecie];
+  if (!edadMaxima) return undefined;
+
+  const fecha = new Date();
+  fecha.setFullYear(fecha.getFullYear() - edadMaxima);
+  return fecha.toLocaleDateString("en-CA");
+}
+
 // El formulario trabaja con strings; el backend espera números y null
 function aPayload(formulario) {
   const textoONull = (valor) => (valor.trim() === "" ? null : valor.trim());
@@ -36,7 +51,7 @@ function aPayload(formulario) {
     nombre: textoONull(formulario.nombre),
     especieId: Number(formulario.especieId),
     sexo: formulario.sexo,
-    edadEstimada: numeroONull(formulario.edadEstimada),
+    fechaNacimiento: formulario.fechaNacimiento || null,
     peso: numeroONull(formulario.peso),
     estado: formulario.estado,
     tieneChip: formulario.tieneChip,
@@ -52,7 +67,7 @@ function aFormulario(animal) {
     nombre: animal.nombre ?? "",
     especieId: String(animal.especieId),
     sexo: animal.sexo,
-    edadEstimada: animal.edadEstimada ?? "",
+    fechaNacimiento: animal.fechaNacimiento ? animal.fechaNacimiento.slice(0, 10) : "",
     peso: animal.peso ?? "",
     estado: animal.estado,
     tieneChip: animal.tieneChip ?? false,
@@ -168,6 +183,15 @@ function AnimalesPage() {
     }
   };
 
+    const especieElegida = especies.find((especie) => String(especie.id) === String(formulario.especieId));
+    const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
+
+    const MaxCambioSexo = 2;
+    const animalEditando = animales.find((animal) => animal.id === editandoId);
+    const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
+    const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MaxCambioSexo;
+    const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
+
   return (
     <section className="min-h-screen bg-emerald-50 p-6">
       <div className="mx-auto max-w-6xl">
@@ -202,7 +226,8 @@ function AnimalesPage() {
                 name="nombre"
                 value={formulario.nombre}
                 onChange={handleChange}
-                maxLength={100}
+                minLength={2}
+                maxLength={30}
                 placeholder="Sin nombre"
                 className={estiloCampo}
               />
@@ -216,7 +241,8 @@ function AnimalesPage() {
                 value={formulario.especieId}
                 onChange={handleChange}
                 required
-                className={estiloCampo}
+                disabled={Boolean(editandoId)}
+                className={`${estiloCampo} disabled:bg-slate-100 disabled:text-slate-500`}
               >
                 <option value="">Seleccione una especie</option>
                 {especies.map((especie) => (
@@ -234,26 +260,36 @@ function AnimalesPage() {
                 name="sexo"
                 value={formulario.sexo}
                 onChange={handleChange}
-                className={`${estiloCampo} capitalize`}
+                disabled={sexoBloqueado}
+                className={`${estiloCampo} capitalize disabled:bg-slate-100 disabled:text-slate-500`}
               >
-                {SEXOS.map((sexo) => (
+                {opcionesSexo.map((sexo) => (
                   <option key={sexo} value={sexo}>
                     {formatearEnum(sexo)}
                   </option>
                 ))}
               </select>
+              {animalEditando && (
+                <p className="mt-1 text-xs text-slate-500">
+                   {sexoBloqueado
+                    ? "Ya se corrigió 2 veces, no se puede modificar"
+                    : `Te quedan ${MaxCambioSexo - animalEditando.cambioSexo} de ${MaxCambioSexo} correcciones de sexo`}
+                  {!sexoDefinido && " (definirlo por primera vez no gasta intentos)"}
+                </p>
+              )}
             </div>
 
             <div>
-              <label htmlFor="edadEstimada" className={estiloEtiqueta}>Edad estimada (meses)</label>
+              <label htmlFor="fechaNacimiento" className={estiloEtiqueta}>Fecha nacimiento (estimada)</label>
               <input
-                type="number"
-                id="edadEstimada"
-                name="edadEstimada"
-                value={formulario.edadEstimada}
+                type="date"
+                id="fechaNacimiento"
+                name="fechaNacimiento"
+                value={formulario.fechaNacimiento}
                 onChange={handleChange}
-                min={0}
-                step={1}
+                min={minNacimiento}
+                max={hoy}
+                title={especieElegida ? `Un ${especieElegida.nombre.toLowerCase()} no puede superar los ${EDAD_MAXIMA[especieElegida.nombre]} años` : undefined}
                 className={estiloCampo}
               />
             </div>
@@ -266,8 +302,8 @@ function AnimalesPage() {
                 name="peso"
                 value={formulario.peso}
                 onChange={handleChange}
-                min={0.01}
-                step={0.01}
+                max={200}
+                step={0.5}
                 className={estiloCampo}
               />
             </div>
@@ -326,7 +362,12 @@ function AnimalesPage() {
                   name="numeroChip"
                   value={formulario.numeroChip}
                   onChange={handleChange}
-                  maxLength={50}
+                  inputMode="numeric"
+                  pattern="\d{15}"
+                  maxLength={15}
+                  required
+                  title="El chip debe tener 15 dígitos"
+                  placeholder="15 dígitos"
                   className={estiloCampo}
                 />
               </div>
@@ -340,6 +381,7 @@ function AnimalesPage() {
                 name="estadoGeneral"
                 value={formulario.estadoGeneral}
                 onChange={handleChange}
+                maxLength={300}
                 rows={2}
                 className={estiloCampo}
               />
@@ -352,6 +394,7 @@ function AnimalesPage() {
                 name="observaciones"
                 value={formulario.observaciones}
                 onChange={handleChange}
+                maxLength={300}
                 rows={2}
                 className={estiloCampo}
               />
@@ -392,7 +435,7 @@ function AnimalesPage() {
                     <th className="px-3 py-3">Nombre</th>
                     <th className="px-3 py-3">Especie</th>
                     <th className="px-3 py-3">Sexo</th>
-                    <th className="px-3 py-3">Edad (meses)</th>
+                    <th className="px-3 py-3">Fecha Nacimiento</th>
                     <th className="px-3 py-3">Peso (kg)</th>
                     <th className="px-3 py-3">Estado</th>
                     <th className="px-3 py-3">Ingreso</th>
@@ -426,7 +469,7 @@ function AnimalesPage() {
                       </td>
                       <td className="px-3 py-3">{animal.especie?.nombre}</td>
                       <td className="px-3 py-3 capitalize">{formatearEnum(animal.sexo)}</td>
-                      <td className="px-3 py-3">{animal.edadEstimada ?? "—"}</td>
+                      <td className="px-3 py-3">{formatearFecha(animal.fechaNacimiento)}</td>
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
                       <td className="px-3 py-3">
                         <span

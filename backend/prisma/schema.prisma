@@ -196,19 +196,20 @@ model Especie {
 // Varios campos opcionales: hay animales que llegan sin antecedentes.
 model Animal {
   id            Int          @id @default(autoincrement())
-  nombre        String?      @db.VarChar(100)
-  edadEstimada  Int?
+  nombre        String?      @db.VarChar(30)
+  fechaNacimiento  DateTime? 
   sexo          Sexo         @default(DESCONOCIDO)
+  cambioSexo    Int          @default(0)
   peso          Float?
   estadoGeneral String?      @db.Text
   fotografiaUrl String?      @db.VarChar(500)
   estado        EstadoAnimal @default(EN_EVALUACION)
   tieneChip     Boolean?
-  numeroChip    String?      @db.VarChar(50)
+  numeroChip    String?      @db.VarChar(15)
   observaciones String?      @db.Text
   fechaIngreso  DateTime     @default(now())
   fechaEgreso   DateTime?
-  motivoEgreso  String?      @db.VarChar(255)
+  motivoEgreso  String?      @db.VarChar(100)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 

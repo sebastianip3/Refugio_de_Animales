@@ -55,7 +55,7 @@ const animalesDemo = [
     nombre: 'Canela',
     especie: 'Perro',
     sexo: 'HEMBRA',
-    edadEstimada: 24,
+    fechaNacimiento: new Date('2023-05-10'),
     peso: 14.5,
     estado: 'EN_ADOPCION',
     registrosClinicos: [
@@ -86,7 +86,7 @@ const animalesDemo = [
     nombre: 'Michi',
     especie: 'Gato',
     sexo: 'MACHO',
-    edadEstimada: 8,
+    fechaNacimiento: new Date('2025-03-15'),
     peso: 3.2,
     estado: 'EN_ADOPCION',
     registrosClinicos: [
