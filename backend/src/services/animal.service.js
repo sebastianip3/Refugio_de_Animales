@@ -48,10 +48,14 @@ export async function crearAnimal(data) {
 export async function actualizarAnimal(id, data) {
   const actual = await obtenerAnimal(id);
 
+  if(data.especieId && data.especieId !== actual.especieId){
+    throw new AppError(409, 'No se puede cambiar la especie de un animal ya registrado');
+  }
+
   const especieId = data.especieId ?? actual.especieId;
   const fechaNacimiento = data.fechaNacimiento !== undefined ? data.fechaNacimiento : actual.fechaNacimiento;
   await validarFechaNacimiento(especieId, fechaNacimiento);
-  
+
   return prisma.animal.update({ where: { id }, data, include: { especie: true } });
 }
 
