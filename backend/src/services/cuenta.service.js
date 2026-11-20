@@ -14,6 +14,17 @@ const CAMPOS_VOLUNTARIO = {
   updatedAt: true,
 };
 
+const TIPOS_TRABAJADOR = ['TRABAJADOR', 'ENCARGADO_ADOPCIONES', 'VETERINARIO'];
+
+const CAMPOS_TRABAJADOR = {
+  id: true,
+  nombre: true,
+  apellido: true,
+  tipo: true,
+  correo: true,
+  horario: true,
+};
+
 export const DIAS_SEMANA = [
   { id: 0, nombre: 'Lunes', abreviatura: 'Lun' },
   { id: 1, nombre: 'Martes', abreviatura: 'Mar' },
@@ -350,6 +361,39 @@ export function listarVoluntarios() {
     where: { tipo: 'VOLUNTARIO' },
     select: CAMPOS_VOLUNTARIO,
     orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+  });
+}
+
+export function listarTrabajadores() {
+  return prisma.cuenta.findMany({
+    where: { tipo: { in: TIPOS_TRABAJADOR } },
+    select: CAMPOS_TRABAJADOR,
+    orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+  });
+}
+
+export async function crearTrabajador(datos) {
+  const contrasenaHash = await bcrypt.hash(datos.contrasena, 10);
+  const { contrasena, ...datosTrabajador } = datos;
+  return prisma.cuenta.create({
+    data: { ...datosTrabajador, contrasenaHash },
+    select: CAMPOS_TRABAJADOR,
+  });
+}
+
+export async function actualizarTrabajador(id, datos) {
+  const resultado = await prisma.cuenta.updateMany({
+    where: { id, tipo: { in: TIPOS_TRABAJADOR } },
+    data: datos,
+  });
+
+  if (resultado.count === 0) {
+    throw new AppError(404, 'Trabajador no encontrado');
+  }
+
+  return prisma.cuenta.findUnique({
+    where: { id },
+    select: CAMPOS_TRABAJADOR,
   });
 }
 
