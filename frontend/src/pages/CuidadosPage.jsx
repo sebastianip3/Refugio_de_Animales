@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { cuidadosApi } from "../services/api.js";
+import { estilosUI } from "../components/EstilosUI.jsx";
 
 function horarioInicial(horasAdelante) {
   const fecha = new Date();
@@ -118,12 +119,13 @@ function CuidadosPage({ cuenta, onIniciarSesion }) {
   const esAdministrador = cuenta?.tipo === "ADMINISTRADOR";
 
   return (
-    <section className="min-h-screen bg-emerald-50 p-6">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-800">🤝 Cuidados</h1>
-          <p className="mt-1 text-slate-600">
-            Consulta y prepara la asignación de cuidadores para los animales del refugio.
+    <section className={estilosUI.pagina}>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className={estilosUI.encabezado}>
+          <h1 className={estilosUI.titulo}>🤝 Cuidados</h1>
+          <p className={estilosUI.subtitulo}>
+            Consulta y prepara la asignación de cuidadores
+            para los animales del refugio.
           </p>
         </header>
 
@@ -179,7 +181,7 @@ function CuidadosPage({ cuenta, onIniciarSesion }) {
                             <button
                               type="button"
                               onClick={() => alternarAsignacion(animal.id)}
-                              className="cursor-pointer rounded-md border border-emerald-200 px-3 py-1 font-medium text-emerald-700 hover:bg-emerald-50"
+                              className="cursor-pointer rounded-lg border border-blue-200 px-3 py-1 font-medium text-blue-700 hover:bg-blue-50"
                             >
                               {animalAbiertoId === animal.id ? "Cerrar" : "Asignar"}
                             </button>
@@ -266,11 +268,11 @@ function CuidadosPage({ cuenta, onIniciarSesion }) {
                                     <p className="mt-3 text-slate-500">
                                       No hay voluntarios disponibles para ese horario.
                                     </p>
-                                )}
+                                  )}
                                 <button
                                   type="submit"
                                   disabled={guardando || consultando || asignacionesAnimal.length > 0 || !personaSeleccionadaId}
-                                  className="mt-4 cursor-pointer rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                  className={`${estilosUI.botonPrincipal} mt-4`}
                                 >
                                   {guardando ? "Guardando..." : "Guardar asignación"}
                                 </button>

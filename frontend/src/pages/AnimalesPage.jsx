@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { animalesApi, especiesApi } from "../services/api.js";
+import { estilosUI } from "../components/EstilosUI.jsx";
 
 const SEXOS = ["DESCONOCIDO", "MACHO", "HEMBRA"];
 const ESTADOS = [
@@ -29,7 +30,7 @@ const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
 
 const hoy = new Date().toLocaleDateString("en-CA");
 
-const formatearFecha = (fecha) => (fecha ? fecha.slice(0,10).split("-").reverse().join("-") : "-");
+const formatearFecha = (fecha) => (fecha ? fecha.slice(0, 10).split("-").reverse().join("-") : "-");
 
 const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
 
@@ -79,13 +80,10 @@ function aFormulario(animal) {
 }
 
 // ---------- Estilos con Tailwind (se reutilizan en toda la página) ----------
-const estiloEtiqueta = "mb-1 block text-sm font-medium text-slate-700";
-const estiloCampo =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200";
-const estiloBotonPrincipal =
-  "cursor-pointer rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300";
-const estiloBotonSecundario =
-  "cursor-pointer rounded-lg border border-slate-300 bg-white px-5 py-2 font-medium text-slate-700 hover:bg-slate-100";
+const estiloEtiqueta = estilosUI.etiqueta;
+const estiloCampo = estilosUI.campo;
+const estiloBotonPrincipal = estilosUI.botonPrincipal;
+const estiloBotonSecundario = estilosUI.botonSecundario;
 
 // Color de la etiqueta según el estado del animal
 const COLOR_ESTADO = {
@@ -183,22 +181,24 @@ function AnimalesPage() {
     }
   };
 
-    const especieElegida = especies.find((especie) => String(especie.id) === String(formulario.especieId));
-    const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
+  const especieElegida = especies.find((especie) => String(especie.id) === String(formulario.especieId));
+  const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
 
-    const MaxCambioSexo = 2;
-    const animalEditando = animales.find((animal) => animal.id === editandoId);
-    const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
-    const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MaxCambioSexo;
-    const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
+  const MaxCambioSexo = 2;
+  const animalEditando = animales.find((animal) => animal.id === editandoId);
+  const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
+  const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MaxCambioSexo;
+  const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
 
   return (
-    <section className="min-h-screen bg-emerald-50 p-6">
-      <div className="mx-auto max-w-6xl">
+    <section className={estilosUI.pagina}>
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* Encabezado */}
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-800">🐾 Animales</h1>
-          <p className="mt-1 text-slate-600">Registra y administra los animales del refugio.</p>
+        <header className={estilosUI.encabezado}>
+          <h1 className={estilosUI.titulo}>🐾 Animales</h1>
+          <p className={estilosUI.subtitulo}>
+            Registra y administra los animales del refugio.
+          </p>
         </header>
 
         {error && (
@@ -210,7 +210,7 @@ function AnimalesPage() {
         {/* Formulario */}
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
         >
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
             {editandoId ? `Editar animal #${editandoId}` : "Registrar animal"}
@@ -271,7 +271,7 @@ function AnimalesPage() {
               </select>
               {animalEditando && (
                 <p className="mt-1 text-xs text-slate-500">
-                   {sexoBloqueado
+                  {sexoBloqueado
                     ? "Ya se corrigió 2 veces, no se puede modificar"
                     : `Te quedan ${MaxCambioSexo - animalEditando.cambioSexo} de ${MaxCambioSexo} correcciones de sexo`}
                   {!sexoDefinido && " (definirlo por primera vez no gasta intentos)"}
@@ -414,7 +414,7 @@ function AnimalesPage() {
         </form>
 
         {/* Listado */}
-        <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
             Listado {!cargando && <span className="text-base font-normal text-slate-500">({animales.length})</span>}
           </h2>
@@ -446,9 +446,8 @@ function AnimalesPage() {
                   {animales.map((animal) => (
                     <tr
                       key={animal.id}
-                      className={`border-b border-slate-100 hover:bg-slate-50 ${
-                        editandoId === animal.id ? "bg-emerald-50" : ""
-                      }`}
+                      className={`border-b border-slate-100 hover:bg-slate-50 ${editandoId === animal.id ? "bg-emerald-50" : ""
+                        }`}
                     >
                       <td className="px-3 py-3 text-slate-500">{animal.id}</td>
                       <td className="px-3 py-3">
@@ -473,9 +472,8 @@ function AnimalesPage() {
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
                       <td className="px-3 py-3">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
-                            COLOR_ESTADO[animal.estado] ?? COLOR_ESTADO.OTRO
-                          }`}
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? COLOR_ESTADO.OTRO
+                            }`}
                         >
                           {formatearEnum(animal.estado)}
                         </span>
