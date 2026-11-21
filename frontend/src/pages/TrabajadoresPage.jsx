@@ -20,6 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import { cuentasApi } from "../services/api.js";
+import TemaRefugio from "../components/TemaRefugio.jsx";
 
 const TIPOS_TRABAJADOR = [
   { valor: "TRABAJADOR", nombre: "Trabajador" },
@@ -134,15 +135,15 @@ function TrabajadoresPage({ cuenta }) {
 
   if (!esAdministrador) {
     return (
-      <Box sx={{ p: 3 }}>
+      <TemaRefugio>
         <Alert severity="error">Solo un administrador puede acceder a esta página.</Alert>
-      </Box>
+      </TemaRefugio>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Box
+    <TemaRefugio>
+      <Paper
         sx={{
           display: "flex",
           justifyContent: "space-between",
@@ -150,6 +151,7 @@ function TrabajadoresPage({ cuenta }) {
           flexDirection: { xs: "column", sm: "row" },
           gap: 2,
           mb: 3,
+          p: 3,
         }}
       >
         <Box>
@@ -163,7 +165,7 @@ function TrabajadoresPage({ cuenta }) {
         <Button variant="contained" onClick={abrirCreacion}>
           Agregar trabajador
         </Button>
-      </Box>
+      </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {mensaje && <Alert severity="success" sx={{ mb: 2 }}>{mensaje}</Alert>}
@@ -301,7 +303,7 @@ function TrabajadoresPage({ cuenta }) {
           </DialogActions>
         </Box>
       </Dialog>
-    </Box>
+    </TemaRefugio>
   );
 }
 
