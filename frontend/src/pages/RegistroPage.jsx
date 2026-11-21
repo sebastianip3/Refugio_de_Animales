@@ -228,6 +228,14 @@ function RegistroPage({ onRegistro, onIrALogin }) {
             ¿Eres parte del refugio? Iniciar sesión
           </button>
         )}
+
+        <a
+          href="/eventos"
+          className="mt-4 block rounded-lg bg-blue-600 px-4 py-3 text-center font-medium text-white hover:bg-blue-700"
+        >
+          📅 Ver eventos del refugio
+        </a>
+
       </section>
     </main>
   );

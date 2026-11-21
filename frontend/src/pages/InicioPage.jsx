@@ -248,10 +248,10 @@ function InicioPage({ cuenta, onNavegar }) {
 
             <button
               type="button"
-              onClick={() => onNavegar("esterilizacion")}
+              onClick={() => onNavegar("eventos")}
               className="flex items-center justify-between rounded-xl border border-violet-100 bg-violet-50 px-4 py-4 text-left font-semibold text-violet-900 transition hover:bg-violet-100"
             >
-              <span>🩺 Esterilización</span>
+              <span>📅 Eventos del refugio</span>
               <span aria-hidden="true">→</span>
             </button>
 

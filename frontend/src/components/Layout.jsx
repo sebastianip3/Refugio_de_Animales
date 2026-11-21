@@ -10,6 +10,7 @@ import {
 
 const SECCIONES = [
   { id: "inicio", label: "Inicio", icono: "🏠" },
+  { id: "eventos", label: "Eventos", icono: "📅" },
   { id: "animales", label: "Animales", icono: "🐾" },
   { id: "adopciones", label: "Adopciones", icono: "🏡" },
   { id: "historial", label: "Historial clínico", icono: "🩺" },
@@ -17,7 +18,6 @@ const SECCIONES = [
   { id: "insumos", label: "Insumos", icono: "📦" },
   { id: "voluntariado", label: "Voluntariado", icono: "🤝" },
   { id: "trabajadores", label: "Trabajadores", icono: "👥" },
-  { id: "esterilizacion", label: "Esterilización", icono: "✂️" },
 ];
 
 const drawerWidth = 260;

@@ -174,3 +174,35 @@ export const insumosApi = {
     request("/insumos/alertas"),
 
 };
+
+
+export const eventosApi = {
+  // Público: consultar eventos publicados
+  listarPublicos: () =>
+    request("/eventos/publicos"),
+
+  // Administrador: consultar todos los eventos
+  listar: () =>
+    request("/eventos"),
+
+  // Administrador: crear un evento
+  crear: (datos) =>
+    request("/eventos", {
+      method: "POST",
+      body: JSON.stringify(datos),
+    }),
+
+  // Administrador: modificar un evento
+  actualizar: (id, datos) =>
+    request(`/eventos/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(datos),
+    }),
+
+  // Administrador: eliminar un evento
+  eliminar: (id) =>
+    request(`/eventos/${id}`, {
+      method: "DELETE",
+    }),
+};
+
