@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cuentasApi } from "../services/api.js";
+import { estilosUI } from "../components/EstilosUI.jsx";
 
 const CAMPOS_INICIALES = {
   nombre: "",
@@ -33,11 +34,9 @@ const PALETA_VOLUNTARIOS = [
   { bg: "bg-fuchsia-100", text: "text-fuchsia-900", ring: "ring-fuchsia-300", badge: "bg-fuchsia-600" },
 ];
 
-const claseCampo =
-  "mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm placeholder:text-slate-400 transition focus:border-sky-500 focus:outline-none focus:ring-4 focus:ring-sky-100";
+const claseCampo = `mt-1 block ${estilosUI.campo}`;
 
-const claseTarjeta =
-  "rounded-3xl bg-white/90 p-6 shadow-xl shadow-sky-900/5 ring-1 ring-slate-200 backdrop-blur sm:p-8";
+const claseTarjeta = estilosUI.tarjeta;
 
 function formatearFecha(fecha) {
   return new Date(fecha).toLocaleString();
@@ -281,7 +280,7 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
 
   if (!cuenta) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 px-4 py-10 sm:px-8">
+      <main className={estilosUI.pagina}>
         <div className="mx-auto max-w-6xl text-center">
           <p className="text-slate-600">Inicia sesión para consultar los voluntarios.</p>
           <button
@@ -344,16 +343,16 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
   );
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 px-4 py-10 sm:px-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <header className="text-center">
+    <section className={estilosUI.pagina}>
+      <div className={estilosUI.contenedor}>
+        <header className={estilosUI.encabezado}>
           <span className="inline-flex items-center gap-2 rounded-full bg-sky-100 px-4 py-1 text-sm font-medium text-sky-700">
             🤝 El equipo que cuida del refugio
           </span>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className={estilosUI.titulo}>
             Voluntariado y Calendario de Turnos
           </h1>
-          <p className="mx-auto mt-3 max-w-3xl text-slate-600">
+          <p className={estilosUI.subtitulo}>
             Ingresa tu disponibilidad horaria en el calendario semanal. El sistema asigna automáticamente
             los turnos procurando coincidir con la disponibilidad de cada voluntario y evitando tiempos muertos.
           </p>
@@ -407,10 +406,10 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                   <p className="mt-0.5 text-2xl font-extrabold text-emerald-900">
                     {resumenCalendario.bloquesConDisponibilidad > 0
                       ? `${Math.round(
-                          (resumenCalendario.bloquesAsignados /
-                            resumenCalendario.bloquesConDisponibilidad) *
-                            100,
-                        )}%`
+                        (resumenCalendario.bloquesAsignados /
+                          resumenCalendario.bloquesConDisponibilidad) *
+                        100,
+                      )}%`
                       : "100%"}
                   </p>
                 </div>
@@ -487,7 +486,7 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                     type="button"
                     onClick={() => guardarDisponibilidadYAsignar()}
                     disabled={guardandoDisponibilidad || !voluntarioActivoId}
-                    className="ml-auto inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-sky-600/20 transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    className={estilosUI.botonPrincipal}
                   >
                     {guardandoDisponibilidad
                       ? "Asignando horarios..."
@@ -593,22 +592,20 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                             <td
                               key={clave}
                               onClick={() => alternarBloqueHorario(dia.id, hora)}
-                              className={`cursor-pointer border-r border-slate-100 p-1.5 align-top transition select-none ${
-                                disponibleMarcado
-                                  ? "bg-sky-50/90 ring-2 ring-inset ring-sky-500"
-                                  : turnoAsignado
-                                    ? "bg-white hover:bg-slate-50"
-                                    : "bg-slate-50/40 hover:bg-sky-50/40"
-                              }`}
+                              className={`cursor-pointer border-r border-slate-100 p-1.5 align-top transition select-none ${disponibleMarcado
+                                ? "bg-sky-50/90 ring-2 ring-inset ring-sky-500"
+                                : turnoAsignado
+                                  ? "bg-white hover:bg-slate-50"
+                                  : "bg-slate-50/40 hover:bg-sky-50/40"
+                                }`}
                             >
                               <div className="flex min-h-[54px] flex-col justify-between gap-1">
                                 <div className="flex items-center justify-between gap-1">
                                   <span
-                                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                                      disponibleMarcado
-                                        ? "bg-sky-600 text-white"
-                                        : "bg-slate-100 text-slate-500"
-                                    }`}
+                                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${disponibleMarcado
+                                      ? "bg-sky-600 text-white"
+                                      : "bg-slate-100 text-slate-500"
+                                      }`}
                                   >
                                     {disponibleMarcado ? "✓ Disponible" : "+ Marcar"}
                                   </span>
@@ -627,11 +624,10 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
 
                                 {turnoAsignado ? (
                                   <div
-                                    className={`rounded-lg px-2 py-1 text-[11px] font-semibold ring-1 ${
-                                      esMiTurno
-                                        ? "bg-emerald-600 text-white ring-emerald-700"
-                                        : `${colorAsignado.bg} ${colorAsignado.text} ${colorAsignado.ring}`
-                                    }`}
+                                    className={`rounded-lg px-2 py-1 text-[11px] font-semibold ring-1 ${esMiTurno
+                                      ? "bg-emerald-600 text-white ring-emerald-700"
+                                      : `${colorAsignado.bg} ${colorAsignado.text} ${colorAsignado.ring}`
+                                      }`}
                                   >
                                     <div className="flex items-center justify-between gap-1 truncate">
                                       <span className="truncate">
@@ -672,11 +668,10 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                         key={vol.id}
                         type="button"
                         onClick={() => !esVoluntarioAutenticado && cambiarVoluntarioActivo(String(vol.id))}
-                        className={`flex flex-col justify-between rounded-2xl p-4 text-left transition ring-1 ${
-                          activo
-                            ? "bg-sky-50/90 ring-2 ring-sky-500 shadow-sm"
-                            : "bg-white hover:bg-slate-50 ring-slate-200"
-                        }`}
+                        className={`flex flex-col justify-between rounded-2xl p-4 text-left transition ring-1 ${activo
+                          ? "bg-sky-50/90 ring-2 ring-sky-500 shadow-sm"
+                          : "bg-white hover:bg-slate-50 ring-slate-200"
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -724,7 +719,7 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                   setMostrarFormulario((visible) => !visible);
                   setError("");
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-5 py-3 font-semibold text-white shadow-lg shadow-sky-600/25 transition hover:-translate-y-0.5 hover:shadow-xl"
+                className={estilosUI.botonPrincipal}
               >
                 <span aria-hidden="true">{mostrarFormulario ? "×" : "+"}</span>
                 {mostrarFormulario ? "Cancelar" : "Agregar voluntario"}
@@ -809,7 +804,7 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-sky-600/25 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
+                    className={estilosUI.botonPrincipal}
                   >
                     {guardando ? "Guardando..." : "Guardar voluntario"}
                   </button>
@@ -881,11 +876,10 @@ function VoluntariadoPage({ cuenta, onIniciarSesion }) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                            voluntario.disponibleCuidado
-                              ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
-                              : "bg-slate-100 text-slate-600 ring-slate-200"
-                          }`}
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${voluntario.disponibleCuidado
+                            ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
+                            : "bg-slate-100 text-slate-600 ring-slate-200"
+                            }`}
                         >
                           {voluntario.disponibleCuidado ? "Disponible" : "No disponible"}
                         </span>

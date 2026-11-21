@@ -9,6 +9,7 @@ import {
   hoyComoTexto,
 } from "../schemas/registroClinico.schema.js";
 import { puedeEditarHistorial } from "../utils.js";
+import { estilosUI } from "../components/EstilosUI.jsx";
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
 // La fecha se guarda a medianoche UTC; sin timeZone se mostraría el día anterior en Chile
@@ -32,13 +33,12 @@ const ESTILO_TIPO = {
   OTRO: { icono: "📋", clase: "bg-slate-100 text-slate-700 ring-slate-200" },
 };
 
-const claseCampo =
-  "mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm placeholder:text-slate-400 transition focus:border-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-100";
 
-const claseTarjeta = "rounded-3xl bg-white/90 p-6 shadow-xl shadow-rose-900/5 ring-1 ring-slate-200 backdrop-blur sm:p-8";
+const claseCampo = `mt-1 block ${estilosUI.campo}`;
 
-const claseBotonPrincipal =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-600/25 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0";
+const claseTarjeta = estilosUI.tarjeta;
+
+const claseBotonPrincipal = estilosUI.botonPrincipal;
 
 const formularioVacio = () => ({
   fecha: hoyComoTexto(),
@@ -259,21 +259,21 @@ function HistorialPage({ cuenta }) {
   );
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-pink-100 px-4 py-10 sm:px-8">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header className="text-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-rose-100 px-4 py-1 text-sm font-medium text-rose-700">
-            🩺 Salud de nuestras mascotas
-          </span>
-          <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
-            Historial clínico
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+    <section className={estilosUI.pagina}>
+      <div className={estilosUI.contenedor}>
+
+        <header className={estilosUI.encabezado}>
+          <h1 className={estilosUI.titulo}>
+            🩺 Historial clínico
+          </h1>
+
+          <p className={estilosUI.subtitulo}>
             {esVeterinario
               ? "Selecciona un animal para registrar nuevos antecedentes veterinarios o actualizar los existentes."
               : "Conoce los antecedentes veterinarios de cada mascota: vacunas, consultas, tratamientos y más."}
           </p>
         </header>
+
 
         {/* Los errores del formulario se muestran dentro de la ventana del formulario */}
         {error && editando === null && <Aviso tipo="error">{error}</Aviso>}
@@ -316,11 +316,10 @@ function HistorialPage({ cuenta }) {
                 return (
                   <li
                     key={animal.id}
-                    className={`flex flex-col rounded-2xl p-4 ring-1 transition ${
-                      activo
-                        ? "bg-rose-50 ring-2 ring-rose-400"
-                        : "bg-white ring-slate-200 hover:-translate-y-0.5 hover:shadow-lg"
-                    }`}
+                    className={`flex flex-col rounded-2xl p-4 ring-1 transition ${activo
+                      ? "bg-rose-50 ring-2 ring-rose-400"
+                      : "bg-white ring-slate-200 hover:-translate-y-0.5 hover:shadow-lg"
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <FotoAnimal animal={animal} className="h-12 w-12 shrink-0 rounded-full" />
@@ -335,9 +334,8 @@ function HistorialPage({ cuenta }) {
                     </div>
 
                     <span
-                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
-                        ESTILO_ESTADO_ANIMAL[animal.estado] ?? ESTILO_ESTADO_ANIMAL.OTRO
-                      }`}
+                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${ESTILO_ESTADO_ANIMAL[animal.estado] ?? ESTILO_ESTADO_ANIMAL.OTRO
+                        }`}
                     >
                       {formatearEnum(animal.estado)}
                     </span>
@@ -346,11 +344,10 @@ function HistorialPage({ cuenta }) {
                       type="button"
                       onClick={() => handleVerHistorial(animal)}
                       disabled={cargandoHistorial}
-                      className={`mt-4 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
-                        activo
-                          ? "bg-rose-600 text-white hover:bg-rose-700"
-                          : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-                      }`}
+                      className={`mt-4 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60 ${activo
+                        ? "bg-rose-600 text-white hover:bg-rose-700"
+                        : "bg-rose-50 text-rose-700 hover:bg-rose-100"
+                        }`}
                     >
                       {esVeterinario ? "Historial clínico" : "Ver historial clínico"}
                     </button>
@@ -421,9 +418,8 @@ function HistorialPage({ cuenta }) {
                     <li key={registro.id} className="relative">
                       <span className="absolute -left-[33px] top-5 h-4 w-4 rounded-full border-4 border-white bg-rose-400 shadow" />
                       <article
-                        className={`rounded-2xl p-5 ring-1 transition ${
-                          editando === registro.id ? "bg-amber-50 ring-2 ring-amber-300" : "bg-white ring-slate-200"
-                        }`}
+                        className={`rounded-2xl p-5 ring-1 transition ${editando === registro.id ? "bg-amber-50 ring-2 ring-amber-300" : "bg-white ring-slate-200"
+                          }`}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex flex-wrap items-center gap-2">
