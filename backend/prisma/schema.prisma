@@ -116,7 +116,6 @@ enum TipoCuenta {
   VETERINARIO
 }
 
-
 enum CategoriaInsumo {
   ALIMENTO
   MEDICAMENTO
@@ -129,18 +128,28 @@ enum TipoMovimientoInsumo {
   CONSUMO
 }
 
+enum TipoEvento {
+  ADOPCION
+  OTRO
+}
+
+enum EstadoEvento {
+  PROGRAMADO
+  CANCELADO
+  FINALIZADO
+}
 
 model Cuenta {
-  id                 Int        @id @default(autoincrement())
-  nombre             String     @db.VarChar(100)
-  apellido           String     @db.VarChar(100)
-  tipo               TipoCuenta @default(VOLUNTARIO)
-  correo             String     @unique @db.VarChar(254)
-  contrasenaHash     String     @db.VarChar(255)
-  horario            String?    @db.VarChar(255)
+  id                Int        @id @default(autoincrement())
+  nombre            String     @db.VarChar(100)
+  apellido          String     @db.VarChar(100)
+  tipo              TipoCuenta @default(VOLUNTARIO)
+  correo            String     @unique @db.VarChar(254)
+  contrasenaHash    String     @db.VarChar(255)
+  horario           String?    @db.VarChar(255)
   disponibleCuidado Boolean?   @default(true)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   cuidados                   CuidadoAnimal[]
   movimientosInsumos         MovimientoInsumo[]
@@ -195,23 +204,23 @@ model Especie {
 
 // Varios campos opcionales: hay animales que llegan sin antecedentes.
 model Animal {
-  id            Int          @id @default(autoincrement())
-  nombre        String?      @db.VarChar(30)
-  fechaNacimiento  DateTime? 
-  sexo          Sexo         @default(DESCONOCIDO)
-  cambioSexo    Int          @default(0)
-  peso          Float?
-  estadoGeneral String?      @db.Text
-  fotografiaUrl String?      @db.VarChar(500)
-  estado        EstadoAnimal @default(EN_EVALUACION)
-  tieneChip     Boolean?
-  numeroChip    String?      @db.VarChar(15)
-  observaciones String?      @db.Text
-  fechaIngreso  DateTime     @default(now())
-  fechaEgreso   DateTime?
-  motivoEgreso  String?      @db.VarChar(100)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id              Int          @id @default(autoincrement())
+  nombre          String?      @db.VarChar(30)
+  fechaNacimiento DateTime?
+  sexo            Sexo         @default(DESCONOCIDO)
+  cambioSexo      Int          @default(0)
+  peso            Float?
+  estadoGeneral   String?      @db.Text
+  fotografiaUrl   String?      @db.VarChar(500)
+  estado          EstadoAnimal @default(EN_EVALUACION)
+  tieneChip       Boolean?
+  numeroChip      String?      @db.VarChar(15)
+  observaciones   String?      @db.Text
+  fechaIngreso    DateTime     @default(now())
+  fechaEgreso     DateTime?
+  motivoEgreso    String?      @db.VarChar(100)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   especieId Int
   especie   Especie @relation(fields: [especieId], references: [id], onDelete: Restrict)
@@ -270,15 +279,15 @@ model Adopcion {
 
 // Visita post adopción que agenda el encargado después de aprobar una adopción
 model VisitaAdopcion {
-  id        Int          @id @default(autoincrement())
-  fecha     DateTime
+  id            Int                 @id @default(autoincrement())
+  fecha         DateTime
   // "HH:MM", uno de los horarios fijos (10:00, 12:00 o 15:00). Las visitas anteriores a este campo no tienen hora
-  hora      String?      @db.VarChar(5)
-  estado    EstadoVisita @default(AGENDADA)
+  hora          String?             @db.VarChar(5)
+  estado        EstadoVisita        @default(AGENDADA)
   // Resultado de la visita: se llenan al registrarla
   estadoAnimal  EstadoAnimalVisita?
   observaciones String?             @db.Text
-  createdAt DateTime     @default(now())
+  createdAt     DateTime            @default(now())
 
   adopcionId Int
   adopcion   Adopcion @relation(fields: [adopcionId], references: [id], onDelete: Restrict)
@@ -314,7 +323,7 @@ model JornadaEsterilizacion {
   fecha        DateTime
   lugar        String   @db.VarChar(255)
   comuna       String   @db.VarChar(100)
-  sector       String  @db.VarChar(100)
+  sector       String   @db.VarChar(100)
   cuposTotales Int
   activa       Boolean  @default(false)
 
@@ -373,7 +382,6 @@ model InscripcionEsterilizacion {
   @@map("inscripciones_esterilizacion")
 }
 
-
 model Insumo {
   id           Int             @id @default(autoincrement())
   nombre       String          @db.VarChar(150)
@@ -392,11 +400,11 @@ model Insumo {
 }
 
 model MovimientoInsumo {
-  id          Int                 @id @default(autoincrement())
+  id          Int                  @id @default(autoincrement())
   tipo        TipoMovimientoInsumo
-  cantidad    Decimal             @db.Decimal(12, 2)
-  observacion String?             @db.Text
-  fecha       DateTime            @default(now())
+  cantidad    Decimal              @db.Decimal(12, 2)
+  observacion String?              @db.Text
+  fecha       DateTime             @default(now())
 
   insumoId Int
   insumo   Insumo @relation(fields: [insumoId], references: [id], onDelete: Restrict)
@@ -407,4 +415,23 @@ model MovimientoInsumo {
   @@index([insumoId, fecha])
   @@index([realizadoPorId])
   @@map("movimientos_insumos")
+}
+
+model Evento {
+  id           Int          @id @default(autoincrement())
+  nombre       String       @db.VarChar(150)
+  tipo         TipoEvento   @default(ADOPCION)
+  descripcion  String       @db.Text
+  fecha        DateTime
+  lugar        String       @db.VarChar(255)
+  comuna       String       @db.VarChar(100)
+  cuposTotales Int?
+  estado       EstadoEvento @default(PROGRAMADO)
+  publicado    Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publicado, fecha])
+  @@map("eventos")
 }

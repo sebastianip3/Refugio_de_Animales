@@ -13,7 +13,7 @@ import VoluntariadoPage from "./pages/VoluntariadoPage.jsx";
 import TrabajadoresPage from "./pages/TrabajadoresPage.jsx";
 import Layout from "./components/Layout.jsx";
 import { cuentasApi, EVENTO_SESION_CERRADA } from "./services/api.js";
-import EsterilizacionPage from "./pages/EsterilizacionPage.jsx";
+import EventosPage from "./pages/EventosPage.jsx";
 
 const PAGINAS = {
   inicio: InicioPage,
@@ -25,7 +25,7 @@ const PAGINAS = {
   voluntariado: VoluntariadoPage,
   trabajadores: TrabajadoresPage,
   perfil: PerfilPage,
-  esterilizacion: EsterilizacionPage,
+  eventos: EventosPage,
 };
 
 function App() {
@@ -45,7 +45,7 @@ function App() {
 
   // El backend borra la cookie de sesión
   const cerrarSesion = async () => {
-    await cuentasApi.logout().catch(() => {});
+    await cuentasApi.logout().catch(() => { });
     volverAlInicio();
   };
 
@@ -55,7 +55,7 @@ function App() {
     cuentasApi
       .perfil()
       .then(setCuenta)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setCargandoSesion(false));
   }, []);
 
@@ -69,6 +69,26 @@ function App() {
   }
 
   if (cargandoSesion) return <p>Cargando...</p>;
+
+
+  // Página pública de eventos
+  if (window.location.pathname === "/eventos") {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <header className="border-b bg-white px-6 py-4">
+          <a
+            href="/"
+            className="font-medium text-blue-600 hover:underline"
+          >
+            ← Volver al inicio
+          </a>
+        </header>
+
+        <EventosPage cuenta={null} />
+      </div>
+    );
+  }
+
 
   if (enLogin) {
     return (
