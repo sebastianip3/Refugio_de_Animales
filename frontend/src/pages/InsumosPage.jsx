@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 
 import { insumosApi } from "../services/api.js";
+import TemaRefugio from "../components/TemaRefugio.jsx";
 
 // Valores iniciales para registrar un insumo
 const formularioInicial = {
@@ -456,8 +457,9 @@ function InsumosPage({ cuenta }) {
   // ============================
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <TemaRefugio>
       {/* ENCABEZADO */}
+      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         📦 Gestión de Insumos
       </Typography>
@@ -491,6 +493,8 @@ function InsumosPage({ cuenta }) {
         )}
       </Box>
 
+
+      </Paper>
 
       {/* RESUMEN DEL INVENTARIO */}
       <Box
@@ -742,7 +746,8 @@ function InsumosPage({ cuenta }) {
                     >
                       {insumos.length === 0
                         ? "No hay insumos registrados."
-                        : "No se encontraron insumos con los filtros seleccionados."}                  </TableCell>
+                        : "No se encontraron insumos con los filtros seleccionados."}
+                    </TableCell>
                   </TableRow>
                 ) : (
                   insumosFiltrados.map((insumo) => {
@@ -1183,7 +1188,7 @@ function InsumosPage({ cuenta }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </TemaRefugio>
   );
 }
 

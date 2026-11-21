@@ -1,25 +1,12 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+
 import { cuentasApi } from "../services/api.js";
 import { loginFormSchema } from "../schemas/login.schema.js";
+import { estilosUI } from "../components/EstilosUI.jsx";
 
-const estiloCampo = {
-  width: "100%",
-  padding: "10px",
-  marginTop: "5px",
-  border: "1px solid #ccc",
-  borderRadius: "6px",
-  boxSizing: "border-box",
-};
-
-const estiloError = {
-  color: "crimson",
-  fontSize: "0.85rem",
-  marginTop: "4px",
-};
-
-// Inicio de sesión del personal del refugio (por ejemplo, el encargado de adopciones)
 function LoginPage({ onLogin, onVolver }) {
   const [errorServidor, setErrorServidor] = useState("");
 
@@ -29,115 +16,137 @@ function LoginPage({ onLogin, onVolver }) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(loginFormSchema),
-    defaultValues: { correo: "", contrasena: "" },
+    defaultValues: {
+      correo: "",
+      contrasena: "",
+    },
   });
 
-  const onSubmit = async (datos) => {
+  async function onSubmit(datos) {
     try {
       setErrorServidor("");
-      // El backend deja la sesión en una cookie; aquí solo llegan los datos de la cuenta
+
       const { cuenta } = await cuentasApi.login(datos);
+
       onLogin(cuenta);
-    } catch (err) {
-      setErrorServidor(err.message);
+    } catch (error) {
+      setErrorServidor(
+        error.message || "No se pudo iniciar sesión"
+      );
     }
-  };
+  }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f4f6f8",
-        padding: "24px",
-      }}
-    >
-      <section
-        style={{
-          width: "100%",
-          maxWidth: "420px",
-          backgroundColor: "white",
-          padding: "32px",
-          borderRadius: "12px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h1 style={{ textAlign: "center", marginBottom: "8px" }}>
-          🐾 Refugio de Animales
-        </h1>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+      <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 
-        <p style={{ textAlign: "center", color: "#666", marginBottom: "28px" }}>
-          Iniciar sesión (personal del refugio)
-        </p>
+        {/* ENCABEZADO */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-3xl">
+            🐾
+          </div>
 
-        {errorServidor && <p style={{ ...estiloError, fontSize: "0.95rem" }}>{errorServidor}</p>}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Refugio de Animales
+          </h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div style={{ marginBottom: "16px" }}>
-            <label htmlFor="correo">Correo electrónico</label>
+          <p className="mt-2 text-sm text-slate-600">
+            Inicia sesión para acceder al sistema del refugio.
+          </p>
+        </div>
+
+        {/* ERROR DEL SERVIDOR */}
+        {errorServidor && (
+          <div
+            role="alert"
+            className={`${estilosUI.error} mb-5`}
+          >
+            {errorServidor}
+          </div>
+        )}
+
+        {/* FORMULARIO */}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="space-y-5"
+        >
+
+          {/* CORREO */}
+          <div>
+            <label
+              htmlFor="correo"
+              className={estilosUI.etiqueta}
+            >
+              Correo electrónico
+            </label>
 
             <input
               id="correo"
               type="email"
               placeholder="correo@ejemplo.com"
               autoComplete="username"
-              style={estiloCampo}
+              aria-invalid={Boolean(errors.correo)}
+              className={estilosUI.campo}
               {...register("correo")}
             />
 
-            {errors.correo && <p style={estiloError}>{errors.correo.message}</p>}
+            {errors.correo && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.correo.message}
+              </p>
+            )}
           </div>
 
-          <div style={{ marginBottom: "24px" }}>
-            <label htmlFor="contrasena">Contraseña</label>
+          {/* CONTRASEÑA */}
+          <div>
+            <label
+              htmlFor="contrasena"
+              className={estilosUI.etiqueta}
+            >
+              Contraseña
+            </label>
 
             <input
               id="contrasena"
               type="password"
-              placeholder="Ingrese su contraseña"
+              placeholder="Ingresa tu contraseña"
               autoComplete="current-password"
-              style={estiloCampo}
+              aria-invalid={Boolean(errors.contrasena)}
+              className={estilosUI.campo}
               {...register("contrasena")}
             />
 
-            {errors.contrasena && <p style={estiloError}>{errors.contrasena.message}</p>}
+            {errors.contrasena && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.contrasena.message}
+              </p>
+            )}
           </div>
 
+          {/* BOTÓN INICIAR SESIÓN */}
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{
-              width: "100%",
-              padding: "11px",
-              border: "none",
-              borderRadius: "6px",
-              backgroundColor: "#2563eb",
-              color: "white",
-              fontWeight: "bold",
-              cursor: isSubmitting ? "not-allowed" : "pointer",
-            }}
+            className={`${estilosUI.botonPrincipal} w-full py-3`}
           >
-            {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
+            {isSubmitting
+              ? "Ingresando..."
+              : "Iniciar sesión"}
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={onVolver}
-          style={{
-            width: "100%",
-            marginTop: "12px",
-            padding: "8px",
-            border: "none",
-            background: "none",
-            color: "#2563eb",
-            cursor: "pointer",
-          }}
-        >
-          Volver
-        </button>
+        {/* VOLVER */}
+        <div className="mt-5 border-t border-slate-200 pt-5 text-center">
+          <button
+            type="button"
+            onClick={onVolver}
+            className="text-sm font-medium text-blue-600 transition hover:text-blue-700 hover:underline"
+          >
+            ← Volver al inicio
+          </button>
+        </div>
+
       </section>
     </main>
   );
