@@ -125,10 +125,12 @@ export const adopcionFormSchema = z.object({
   nombre: z
     .string()
     .trim()
-    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .min(3, "El nombre debe tener al menos 3 caracteres")
     .max(57, "El nombre no puede superar los 57 caracteres")
     // Solo letras (con tildes, ñ y ü), espacios y apóstrofo (O'Higgins): sin números ni otros caracteres especiales
-    .regex(/^[\p{L} '’]+$/u, "El nombre solo puede tener letras, espacios y apóstrofo ('), sin números ni otros caracteres especiales"),
+    .regex(/^[\p{L} '’]+$/u, "El nombre solo puede tener letras, espacios y apóstrofo ('), sin números ni otros caracteres especiales")
+    // El apóstrofo debe ir entre dos letras: "O'Higgins" sí; "'Ana", "Ana 'Soto" o "Soto'" no
+    .refine((valor) => !/(^|[^\p{L}])['’]|['’]($|[^\p{L}])/u.test(valor), "El apóstrofo (') debe ir entre dos letras, por ejemplo O'Higgins"),
 
   rut: rutSchema,
 
