@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { animalesApi, registrosClinicosApi } from "../services/api.js";
+import { animalesApi, cuentasApi, registrosClinicosApi } from "../services/api.js";
 import {
   registroClinicoFormSchema,
   TIPOS_REGISTRO_CLINICO,
-  VETERINARIOS,
+  nombreVeterinario,
   hoyComoTexto,
 } from "../schemas/registroClinico.schema.js";
 import { puedeEditarHistorial } from "../utils.js";
@@ -40,13 +40,14 @@ const claseTarjeta = estilosUI.tarjeta;
 
 const claseBotonPrincipal = estilosUI.botonPrincipal;
 
-const formularioVacio = () => ({
+// veterinarioId: el veterinario que inició sesión queda seleccionado por defecto
+const formularioVacio = (veterinarioId = "") => ({
   fecha: hoyComoTexto(),
   tipo: "",
   descripcion: "",
   diagnostico: "",
   tratamiento: "",
-  veterinario: "",
+  veterinarioId: veterinarioId,
   observaciones: "",
 });
 
@@ -56,7 +57,7 @@ const aFormulario = (registro) => ({
   descripcion: registro.descripcion,
   diagnostico: registro.diagnostico ?? "",
   tratamiento: registro.tratamiento ?? "",
-  veterinario: registro.veterinario ?? "",
+  veterinarioId: registro.veterinarioId ? String(registro.veterinarioId) : "",
   observaciones: registro.observaciones ?? "",
 });
 
@@ -159,6 +160,11 @@ function HistorialPage({ cuenta }) {
   const [mensaje, setMensaje] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const panelHistorial = useRef(null);
+  // Veterinarios que trabajan actualmente en el refugio (solo se cargan para quien edita)
+  const [veterinarios, setVeterinarios] = useState([]);
+
+  // Si quien inició sesión es veterinario, queda como responsable por defecto
+  const veterinarioPorDefecto = cuenta?.tipo === "VETERINARIO" ? String(cuenta.id) : "";
 
   const {
     register,
@@ -167,7 +173,7 @@ function HistorialPage({ cuenta }) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registroClinicoFormSchema),
-    defaultValues: formularioVacio(),
+    defaultValues: formularioVacio(veterinarioPorDefecto),
   });
 
   useEffect(() => {
@@ -185,6 +191,15 @@ function HistorialPage({ cuenta }) {
     };
 
     cargarAnimales();
+  }, [esVeterinario]);
+
+  useEffect(() => {
+    if (!esVeterinario) return;
+
+    cuentasApi
+      .listarVeterinarios()
+      .then(setVeterinarios)
+      .catch((err) => setError(`No se pudo cargar la lista de veterinarios: ${err.message}`));
   }, [esVeterinario]);
 
   // Al abrir el historial de otro animal se baja hasta el panel
@@ -206,7 +221,7 @@ function HistorialPage({ cuenta }) {
 
   const cerrarFormulario = () => {
     setEditando(null);
-    reset(formularioVacio());
+    reset(formularioVacio(veterinarioPorDefecto));
   };
 
   const handleVerHistorial = (animal) => {
@@ -224,7 +239,7 @@ function HistorialPage({ cuenta }) {
   const handleAgregar = () => {
     setMensaje("");
     setError("");
-    reset(formularioVacio());
+    reset(formularioVacio(veterinarioPorDefecto));
     setEditando("nuevo");
   };
 
@@ -252,6 +267,16 @@ function HistorialPage({ cuenta }) {
       setError(`No se pudo guardar el registro clínico: ${err.message}`);
     }
   };
+
+  // Al editar un registro cuyo veterinario ya no trabaja en el refugio, se mantiene como opción
+  // para no obligar a cambiarlo
+  const registroEditado =
+    typeof editando === "number" ? seleccionado?.registrosClinicos?.find((r) => r.id === editando) : null;
+  const veterinarioAnterior = registroEditado?.veterinario;
+  const opcionesVeterinario =
+    veterinarioAnterior && !veterinarios.some((v) => v.id === veterinarioAnterior.id)
+      ? [...veterinarios, { ...veterinarioAnterior, yaNoTrabaja: true }]
+      : veterinarios;
 
   const texto = busqueda.trim().toLowerCase();
   const animalesFiltrados = animales.filter((animal) =>
@@ -456,7 +481,7 @@ function HistorialPage({ cuenta }) {
                         )}
 
                         <p className="mt-3 text-xs text-slate-500">
-                          👩‍⚕️ {VETERINARIOS[registro.veterinario] || "Veterinario no indicado"}
+                          👩‍⚕️ {nombreVeterinario(registro.veterinario)}
                         </p>
                       </article>
                     </li>
@@ -542,18 +567,24 @@ function HistorialPage({ cuenta }) {
               <Campo
                 id="veterinario"
                 label="Veterinario responsable"
-                error={errors.veterinario}
+                error={errors.veterinarioId}
                 className="sm:col-span-2"
               >
-                <select id="veterinario" className={claseCampo} {...register("veterinario")}>
+                <select id="veterinario" className={claseCampo} {...register("veterinarioId")}>
                   <option value="">Seleccione un veterinario</option>
 
-                  {Object.entries(VETERINARIOS).map(([valor, nombre]) => (
-                    <option key={valor} value={valor}>
-                      {nombre}
+                  {opcionesVeterinario.map((veterinario) => (
+                    <option key={veterinario.id} value={veterinario.id}>
+                      {nombreVeterinario(veterinario)}
+                      {veterinario.yaNoTrabaja ? " (ya no trabaja en el refugio)" : ""}
                     </option>
                   ))}
                 </select>
+                {veterinarios.length === 0 && (
+                  <p className="mt-1 text-sm text-amber-700">
+                    No hay veterinarios registrados. El administrador debe agregarlos como trabajadores.
+                  </p>
+                )}
               </Campo>
             </div>
 

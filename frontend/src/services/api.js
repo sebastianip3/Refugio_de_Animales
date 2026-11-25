@@ -63,6 +63,8 @@ export const cuentasApi = {
   crearVoluntario: (datos) =>
     request("/cuentas/voluntarios", { method: "POST", body: JSON.stringify(datos) }),
   eliminarVoluntario: (id) => request(`/cuentas/${id}`, { method: "DELETE" }),
+  // Veterinarios que trabajan en el refugio, para elegir el responsable de un registro clínico
+  listarVeterinarios: () => request("/cuentas/veterinarios"),
   listarTrabajadores: () => request("/cuentas/trabajadores"),
   crearTrabajador: (datos) =>
     request("/cuentas/trabajadores", { method: "POST", body: JSON.stringify(datos) }),
