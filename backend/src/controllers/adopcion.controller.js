@@ -106,7 +106,7 @@ export async function actualizarAdopcion(req, res) {
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
     const data = updateAdopcionSchema.parse(req.body);
-    const adopcion = await adopcionService.actualizarAdopcion(id, data);
+    const adopcion = await adopcionService.actualizarAdopcion(id, data, req.cuenta);
     res.json(adopcion);
   } catch (error) {
     manejarError(res, error);
@@ -143,7 +143,7 @@ export async function agendarVisita(req, res) {
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
     const data = visitaSchema.parse(req.body);
-    const visita = await adopcionService.agendarVisita(id, data);
+    const visita = await adopcionService.agendarVisita(id, data, req.cuenta);
     res.status(201).json(visita);
   } catch (error) {
     manejarError(res, error);
@@ -157,7 +157,7 @@ export async function cancelarVisita(req, res) {
     const visitaId = parseId(req.params.visitaId);
     if (!id || !visitaId) return res.status(400).json({ message: 'ID inválido' });
 
-    const visita = await adopcionService.cancelarVisita(id, visitaId);
+    const visita = await adopcionService.cancelarVisita(id, visitaId, req.cuenta);
     res.json(visita);
   } catch (error) {
     manejarError(res, error);
@@ -186,7 +186,7 @@ export async function rechazarAdopcionTrasVisita(req, res) {
     const visitaId = parseId(req.params.visitaId);
     if (!id || !visitaId) return res.status(400).json({ message: 'ID inválido' });
 
-    const resultado = await adopcionService.rechazarAdopcionTrasVisita(id, visitaId);
+    const resultado = await adopcionService.rechazarAdopcionTrasVisita(id, visitaId, req.cuenta);
     res.json(resultado);
   } catch (error) {
     manejarError(res, error);

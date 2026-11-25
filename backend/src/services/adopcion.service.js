@@ -119,7 +119,8 @@ export async function consultarSolicitudes(rut, email) {
 // Solo se puede cambiar el estado mientras la adopción está en proceso.
 // Al aprobarla, el animal pasa a ADOPTADO y se registra su egreso.
 // Si se aprueba o rechaza, se avisa al adoptante por correo después de guardar.
-export async function actualizarAdopcion(id, data) {
+// encargado: cuenta que hizo el cambio, para indicar en el correo quién aprobó o rechazó
+export async function actualizarAdopcion(id, data, encargado) {
   let cambioEstado = false;
 
   const adopcion = await prisma.$transaction(async (tx) => {
@@ -147,7 +148,7 @@ export async function actualizarAdopcion(id, data) {
 
   // Si el correo falla, el cambio de estado igual queda guardado; el encargado ve el aviso
   try {
-    await enviarResultadoAdopcion(adopcion);
+    await enviarResultadoAdopcion(adopcion, encargado);
     return { ...adopcion, correoEnviado: true };
   } catch (error) {
     console.error('No se pudo enviar el correo de la adopción:', error.message);
@@ -183,8 +184,9 @@ export async function listarVisitas(adopcionId) {
   return prisma.visitaAdopcion.findMany({ where: { adopcionId }, orderBy: { fecha: 'asc' } });
 }
 
-// Días mínimos entre la adopción y la visita de seguimiento
-const DIAS_MINIMOS_VISITA = 15;
+// La visita de seguimiento se puede agendar desde el día siguiente a la adopción.
+// (El frontend sugiere 15 días después, pero el encargado puede elegir otro día)
+const DIAS_MINIMOS_VISITA = 1;
 
 // Medianoche UTC del día (local) de la fecha más N días, igual que las fechas del formulario
 function diaUtc(fecha, diasExtra = 0) {
@@ -197,10 +199,11 @@ const formatearDia = (fecha) => fecha.toISOString().slice(0, 10).split('-').reve
 // Datos del adoptante que necesita el correo de la visita
 const DATOS_AVISO_VISITA = { nombre: true, email: true, animal: { select: { nombre: true } } };
 
-// Envía el aviso de la visita al adoptante. Si el correo falla, la visita igual queda guardada
-async function avisarVisita(adopcion, visita) {
+// Envía el aviso de la visita al adoptante, indicando qué encargado la agendó o canceló.
+// Si el correo falla, la visita igual queda guardada
+async function avisarVisita(adopcion, visita, encargado) {
   try {
-    await enviarAvisoVisita(adopcion, visita);
+    await enviarAvisoVisita(adopcion, visita, encargado);
     return { ...visita, correoEnviado: true };
   } catch (error) {
     console.error('No se pudo enviar el correo de la visita:', error.message);
@@ -208,10 +211,10 @@ async function avisarVisita(adopcion, visita) {
   }
 }
 
-// Solo se agendan visitas a adopciones aprobadas, desde 15 días después de la adopción,
+// Solo se agendan visitas a adopciones aprobadas, desde el día siguiente a la adopción,
 // y una a la vez: si ya tiene una visita agendada próxima no se agenda otra.
 // Después de guardar se avisa al adoptante por correo
-export async function agendarVisita(adopcionId, data) {
+export async function agendarVisita(adopcionId, data, encargado) {
   const { adopcion, visita } = await prisma.$transaction(async (tx) => {
     const adopcion = await tx.adopcion.findUnique({
       where: { id: adopcionId },
@@ -228,7 +231,7 @@ export async function agendarVisita(adopcionId, data) {
     if (data.fecha < fechaMinima) {
       throw new AppError(
         409,
-        `La visita debe ser al menos ${DIAS_MINIMOS_VISITA} días después de la adopción (desde el ${formatearDia(fechaMinima)})`
+        `La visita debe ser desde el día siguiente a la adopción (desde el ${formatearDia(fechaMinima)})`
       );
     }
 
@@ -277,12 +280,12 @@ export async function agendarVisita(adopcionId, data) {
     return { adopcion, visita };
   }, TX_OPCIONES);
 
-  return avisarVisita(adopcion, visita);
+  return avisarVisita(adopcion, visita, encargado);
 }
 
 // Solo se cancela una visita agendada que aún no pasa. La visita debe ser de esa adopción,
 // para no cancelar una ajena cambiando la URL. Después se avisa al adoptante por correo
-export async function cancelarVisita(adopcionId, visitaId) {
+export async function cancelarVisita(adopcionId, visitaId, encargado) {
   const visita = await prisma.visitaAdopcion.findFirst({
     where: { id: visitaId, adopcionId },
     include: { adopcion: { select: DATOS_AVISO_VISITA } },
@@ -299,7 +302,7 @@ export async function cancelarVisita(adopcionId, visitaId) {
     data: { estado: 'CANCELADA' },
   });
 
-  return avisarVisita(visita.adopcion, cancelada);
+  return avisarVisita(visita.adopcion, cancelada, encargado);
 }
 
 // Momento de la visita en hora local: la fecha es el día (guardado a medianoche UTC) y la hora "HH:MM".
@@ -332,7 +335,7 @@ export async function registrarResultadoVisita(adopcionId, visitaId, data) {
 // el encargado rechaza la adopción: queda RECHAZADA con las observaciones de la visita como motivo,
 // el animal vuelve al refugio disponible para adopción, se cancelan las visitas pendientes
 // y se avisa al adoptante por correo
-export async function rechazarAdopcionTrasVisita(adopcionId, visitaId) {
+export async function rechazarAdopcionTrasVisita(adopcionId, visitaId, encargado) {
   const { visita, adopcion } = await prisma.$transaction(async (tx) => {
     const visita = await tx.visitaAdopcion.findFirst({
       where: { id: visitaId, adopcionId },
@@ -366,7 +369,7 @@ export async function rechazarAdopcionTrasVisita(adopcionId, visitaId) {
 
   // Si el correo falla, el rechazo igual queda guardado; el encargado ve el aviso
   try {
-    await enviarAdopcionRechazadaTrasVisita(adopcion, visita);
+    await enviarAdopcionRechazadaTrasVisita(adopcion, visita, encargado);
     return { adopcionId, correoEnviado: true };
   } catch (error) {
     console.error('No se pudo enviar el correo del rechazo:', error.message);
