@@ -214,7 +214,7 @@ model Animal {
   fotografiaUrl   String?      @db.VarChar(500)
   estado          EstadoAnimal @default(EN_EVALUACION)
   tieneChip       Boolean?
-  numeroChip      String?      @db.VarChar(15)
+  numeroChip      String?      @unique @db.VarChar(15)
   observaciones   String?      @db.Text
   fechaIngreso    DateTime     @default(now())
   fechaEgreso     DateTime?
