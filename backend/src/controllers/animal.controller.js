@@ -19,6 +19,9 @@ function manejarError(res, error) {
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2025') return res.status(404).json({ message: 'Animal no encontrado' });
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'Ya existe un animal con ese número de chip' });
+    }
     if (error.code === 'P2003') {
       return res.status(409).json({ message: 'La especie no existe o el animal tiene registros asociados' });
     }
