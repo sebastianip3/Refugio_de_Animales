@@ -57,13 +57,6 @@ enum EstadoAnimalVisita {
   CON_PROBLEMAS
 }
 
-// Veterinarios responsables de los registros clínicos
-enum Veterinario {
-  JAMES_HERRIOT
-  KAREN_BECKER
-  FRANCISCA_GONZALEZ
-}
-
 // Comunas donde el refugio acepta adopciones
 enum Comuna {
   CONCEPCION
@@ -155,6 +148,7 @@ model Cuenta {
   movimientosInsumos         MovimientoInsumo[]
   disponibilidadesVoluntario DisponibilidadVoluntario[]
   turnosVoluntario           TurnoVoluntario[]
+  registrosClinicos          RegistroClinico[]
 
   @@index([tipo, disponibleCuidado])
   @@map("cuentas")
@@ -304,7 +298,6 @@ model RegistroClinico {
   descripcion   String              @db.Text
   diagnostico   String?             @db.Text
   tratamiento   String?             @db.Text
-  veterinario   Veterinario?
   observaciones String?             @db.Text
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -312,7 +305,13 @@ model RegistroClinico {
   animalId Int
   animal   Animal @relation(fields: [animalId], references: [id], onDelete: Restrict)
 
+  // Veterinario responsable: una cuenta de tipo VETERINARIO del refugio.
+  // Si la cuenta se elimina, el registro se conserva sin veterinario
+  veterinarioId Int?
+  veterinario   Cuenta? @relation(fields: [veterinarioId], references: [id], onDelete: SetNull)
+
   @@index([animalId, fecha])
+  @@index([veterinarioId])
   @@map("registros_clinicos")
 }
 
