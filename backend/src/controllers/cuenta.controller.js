@@ -102,6 +102,16 @@ export async function listarVoluntarios(req, res) {
   }
 }
 
+// GET /cuentas/veterinarios
+export async function listarVeterinarios(req, res) {
+  try {
+    const veterinarios = await cuentaService.listarVeterinarios();
+    return res.json(veterinarios);
+  } catch (error) {
+    return manejarErrorCuenta(res, error);
+  }
+}
+
 export async function listarTrabajadores(req, res) {
   try {
     const trabajadores = await cuentaService.listarTrabajadores();
