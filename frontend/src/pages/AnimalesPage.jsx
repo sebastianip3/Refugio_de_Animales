@@ -11,6 +11,7 @@ const ESTADOS = [
   "ADOPTADO",
   "OTRO",
 ];
+const ESTADOS_INICIALES = ["EN_EVALUACION", "CUARENTENA", "EN_TRATAMIENTO"];
 
 const FORMULARIO_VACIO = {
   nombre: "",
@@ -33,6 +34,7 @@ const hoy = new Date().toLocaleDateString("en-CA");
 const formatearFecha = (fecha) => (fecha ? fecha.slice(0, 10).split("-").reverse().join("-") : "-");
 
 const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
+const PESO_MAXIMO = {Perro: 200, Gato: 25 };
 
 function fechaMinimaNacimiento(nombreEspecie) {
   const edadMaxima = EDAD_MAXIMA[nombreEspecie];
@@ -127,6 +129,9 @@ function AnimalesPage() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // el peso admite máximo 2 decimales: si escribe un tercero, no se actualiza
+    if (name === 'peso' && !/^\d*(\.\d{0,2})?$/.test(value)) return;
 
     setFormulario({
       ...formulario,
@@ -183,6 +188,7 @@ function AnimalesPage() {
 
   const especieElegida = especies.find((especie) => String(especie.id) === String(formulario.especieId));
   const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
+  const maxPeso = PESO_MAXIMO[especieElegida?.nombre] ?? 200; //si todavia no se ha elegido especie se queda en 200
 
   const MaxCambioSexo = 2;
   const animalEditando = animales.find((animal) => animal.id === editandoId);
@@ -221,6 +227,8 @@ function AnimalesPage() {
             <div>
               <label htmlFor="nombre" className={estiloEtiqueta}>Nombre</label>
               <input
+                pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+([ '\-][A-Za-zÁÉÍÓÚáéíóúÑñÜü]+)*"
+                title="Solo letras, separadas por un espacio o guion"
                 type="text"
                 id="nombre"
                 name="nombre"
@@ -302,8 +310,10 @@ function AnimalesPage() {
                 name="peso"
                 value={formulario.peso}
                 onChange={handleChange}
-                max={200}
-                step={0.5}
+                min={0}
+                max={maxPeso}
+                step="any"
+                title={especieElegida ? `Un ${especieElegida.nombre.toLowerCase()} no puede pesar más de ${maxPeso} kg` : undefined}
                 className={estiloCampo}
               />
             </div>
@@ -317,7 +327,7 @@ function AnimalesPage() {
                 onChange={handleChange}
                 className={`${estiloCampo} capitalize`}
               >
-                {ESTADOS.map((estado) => (
+                {(editandoId ? ESTADOS : ESTADOS_INICIALES).map((estado) => (
                   <option key={estado} value={estado}>
                     {formatearEnum(estado)}
                   </option>
