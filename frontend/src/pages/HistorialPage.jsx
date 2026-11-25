@@ -8,7 +8,7 @@ import {
   nombreVeterinario,
   hoyComoTexto,
 } from "../schemas/registroClinico.schema.js";
-import { puedeEditarHistorial } from "../utils.js";
+import { ESTILO_ESTADO_ANIMAL, puedeEditarHistorial } from "../utils.js";
 import { estilosUI } from "../components/EstilosUI.jsx";
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
@@ -68,15 +68,6 @@ const CAMPOS_TEXTO = [
   { nombre: "observaciones", etiqueta: "Observaciones adicionales", maximo: 200 },
 ];
 
-// Color de la etiqueta del estado de cada animal (enum EstadoAnimal del backend)
-const ESTILO_ESTADO_ANIMAL = {
-  EN_EVALUACION: "bg-sky-50 text-sky-700 ring-sky-200",
-  CUARENTENA: "bg-amber-50 text-amber-700 ring-amber-200",
-  EN_TRATAMIENTO: "bg-rose-50 text-rose-700 ring-rose-200",
-  EN_ADOPCION: "bg-violet-50 text-violet-700 ring-violet-200",
-  ADOPTADO: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  OTRO: "bg-slate-100 text-slate-600 ring-slate-200",
-};
 
 // Detalles de un registro que se muestran solo si tienen valor
 const DETALLES_REGISTRO = [
@@ -159,6 +150,8 @@ function HistorialPage({ cuenta }) {
   const [editando, setEditando] = useState(null);
   const [mensaje, setMensaje] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  // Filtro del veterinario: todas, solo las que siguen en el refugio o solo las adoptadas
+  const [filtroAdopcion, setFiltroAdopcion] = useState("TODAS");
   const panelHistorial = useRef(null);
   // Veterinarios que trabajan actualmente en el refugio (solo se cargan para quien edita)
   const [veterinarios, setVeterinarios] = useState([]);
@@ -279,9 +272,22 @@ function HistorialPage({ cuenta }) {
       : veterinarios;
 
   const texto = busqueda.trim().toLowerCase();
-  const animalesFiltrados = animales.filter((animal) =>
-    `${animal.nombre ?? ""} ${animal.especie?.nombre ?? ""}`.toLowerCase().includes(texto)
+  const cumpleFiltroAdopcion = (animal) =>
+    filtroAdopcion === "TODAS" ||
+    (filtroAdopcion === "ADOPTADAS" ? animal.estado === "ADOPTADO" : animal.estado !== "ADOPTADO");
+
+  const animalesFiltrados = animales.filter(
+    (animal) =>
+      cumpleFiltroAdopcion(animal) &&
+      `${animal.nombre ?? ""} ${animal.especie?.nombre ?? ""}`.toLowerCase().includes(texto)
   );
+
+  const cantidadAdoptadas = animales.filter((animal) => animal.estado === "ADOPTADO").length;
+  const opcionesFiltroAdopcion = [
+    { valor: "TODAS", texto: "Todas", cantidad: animales.length },
+    { valor: "EN_REFUGIO", texto: "En el refugio", cantidad: animales.length - cantidadAdoptadas },
+    { valor: "ADOPTADAS", texto: "Adoptadas", cantidad: cantidadAdoptadas },
+  ];
 
   return (
     <section className={estilosUI.pagina}>
@@ -321,6 +327,30 @@ function HistorialPage({ cuenta }) {
               className={`${claseCampo} sm:max-w-xs`}
             />
           </div>
+
+          {/* Solo el veterinario ve las mascotas adoptadas, así que solo él puede filtrarlas */}
+          {esVeterinario && (
+            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filtrar mascotas">
+              {opcionesFiltroAdopcion.map(({ valor, texto: etiqueta, cantidad }) => {
+                const activo = filtroAdopcion === valor;
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => setFiltroAdopcion(valor)}
+                    aria-pressed={activo}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      activo
+                        ? "bg-rose-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {etiqueta} ({cantidad})
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {cargando ? (
             <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
