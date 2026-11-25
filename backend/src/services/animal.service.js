@@ -1,7 +1,9 @@
 import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 
+const ESTADOS_INICIALES = ['EN_EVALUACION', 'CUARENTENA', 'EN_TRATAMIENTO'];
 const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
+const PESO_MAXIMO = { Perro: 200, Gato: 25 };
 
 // la fecha de nacimiento no puede ser futura ni superar la edad máxima de su especie
 async function validarFechaNacimiento(especieId, fechaNacimiento) {
@@ -25,6 +27,18 @@ async function validarFechaNacimiento(especieId, fechaNacimiento) {
   }
 }
 
+async function validarPeso(especieId, peso) {
+  if (peso == null) return;
+
+  const especie = await prisma.especie.findUnique({where: {id: especieId}});
+  if (!especie) throw new AppError(404, 'Especie no encontrada');
+
+  const pesoMaximo = PESO_MAXIMO[especie.nombre];
+  if (pesoMaximo && peso > pesoMaximo) {
+    throw new AppError(400, `Un ${especie.nombre.toLocaleLowerCase()} no puede pesar más de ${pesoMaximo} kg`);
+  }
+}
+
 // filtros: { estado?, especieId? }, ya validados por el controller
 export function listarAnimales(filtros = {}) {
   return prisma.animal.findMany({
@@ -41,7 +55,13 @@ export async function obtenerAnimal(id) {
 }
 
 export async function crearAnimal(data) {
+  if(data.estado && !ESTADOS_INICIALES.includes(data.estado)){
+    throw new AppError(400, 'Un animal nuevo solo puede ingresar en evaluación, cuarentena o tratamiento');
+  }
+  //si no tiene chip no se guarda
+  if(!data.tieneChip) data.numeroChip = null;
   await validarFechaNacimiento(data.especieId, data.fechaNacimiento);
+  await validarPeso(data.especieId, data.peso);
   return prisma.animal.create({ data, include: { especie: true } });
 }
 
@@ -56,7 +76,7 @@ export async function actualizarAnimal(id, data) {
 
   const MaxCambioSexo = 2;
   
-if (data.sexo && data.sexo !== actual.sexo) {
+  if (data.sexo && data.sexo !== actual.sexo) {
     // una vez definido no puede volver a desconocido 
     if (data.sexo === 'DESCONOCIDO') {
       throw new AppError(409, 'Un animal con sexo ya definido no puede volver a desconocido');
@@ -73,6 +93,11 @@ if (data.sexo && data.sexo !== actual.sexo) {
 
   const fechaNacimiento = data.fechaNacimiento !== undefined ? data.fechaNacimiento : actual.fechaNacimiento;
   await validarFechaNacimiento(especieId, fechaNacimiento);
+
+  const peso = data.peso !== undefined ? data.peso : actual.peso;
+  await validarPeso(especieId, peso);
+
+  if (data.tieneChip === false) data.numeroChip = null;
 
   return prisma.animal.update({ where: { id }, data, include: { especie: true } });
 }
