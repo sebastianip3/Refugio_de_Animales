@@ -97,3 +97,15 @@ export async function eliminarAnimal(req, res) {
     manejarError(res, error);
   }
 }
+
+export async function marcarEncontrado(req, res) {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return res.status(400).json({ message: 'ID inválido' });
+
+    const animal = await animalService.marcarEncontrado(id);
+    res.json(animal);
+  } catch (error) {
+    manejarError(res, error);
+  }
+}
