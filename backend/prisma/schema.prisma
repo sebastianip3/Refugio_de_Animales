@@ -138,7 +138,7 @@ model Cuenta {
   apellido          String     @db.VarChar(100)
   tipo              TipoCuenta @default(VOLUNTARIO)
   correo            String     @unique @db.VarChar(254)
-  contrasenaHash    String     @db.VarChar(255)
+  contrasenaHash    String     @db.VarChar(20)
   horario           String?    @db.VarChar(255)
   disponibleCuidado Boolean?   @default(true)
   createdAt         DateTime   @default(now())

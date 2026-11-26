@@ -22,8 +22,14 @@ export const idVoluntarioSchema = z.object({
 });
 
 export const crearVoluntarioSchema = z.object({
-  nombre: z.string().trim().min(1).max(100),
-  apellido: z.string().trim().min(1).max(100),
+  nombre: z.string().trim().min(1).max(100).regex(
+    /^\p{L}+(?:['’]\p{L}+)*$/u,
+    'Usa solo letras o apóstrofos entre letras en apellido o nombre',
+  ),
+  apellido: z.string().trim().min(1).max(100).regex(
+    /^\p{L}+(?:['’]\p{L}+)*$/u,
+    'Usa solo letras o apóstrofos entre letras en apellido o nombre',
+  ),
   correo: correoSchema,
   contrasena: z.string().min(8).max(72),
   horario: z.string().trim().max(255).optional().transform((valor) => valor || null),
@@ -31,16 +37,28 @@ export const crearVoluntarioSchema = z.object({
 });
 
 export const actualizarTrabajadorSchema = z.object({
-  nombre: z.string().trim().min(1).max(100),
-  apellido: z.string().trim().min(1).max(100),
+  nombre: z.string().trim().min(1).max(100).regex(
+    /^\p{L}+(?:['’]\p{L}+)*$/u,
+    'Usa solo letras o apóstrofos entre letras en apellido o nombre',
+  ),
+  apellido: z.string().trim().min(1).max(100).regex(
+    /^\p{L}+(?:['’]\p{L}+)*$/u,
+    'Usa solo letras o apóstrofos entre letras en apellido o nombre',
+  ),
   correo: correoSchema,
   tipo: z.enum(['TRABAJADOR', 'ENCARGADO_ADOPCIONES', 'VETERINARIO']),
   horario: z.string().trim().max(255).optional().transform((valor) => valor || null),
 });
 
 export const crearTrabajadorSchema = z.object({
-  nombre: z.string().trim().min(1).max(100),
-  apellido: z.string().trim().min(1).max(100),
+  nombre: z.string().trim().min(1).max(100).regex(
+    /^\p{L}+(?:['’]\p{L}+)*$/u,
+    'Usa solo letras o apóstrofos entre letras en apellido o nombre',
+  ),
+  apellido: z.string().trim().min(1).max(100).regex(
+    /^\p{L}+(?:['’]\p{L}+)*$/u,
+    'Usa solo letras o apóstrofos entre letras en apellido o nombre',
+  ),
   correo: correoSchema,
   contrasena: z.string().min(8).max(72),
   tipo: z.enum(['TRABAJADOR', 'ENCARGADO_ADOPCIONES', 'VETERINARIO']),

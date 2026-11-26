@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE "cuentas"
+  ALTER COLUMN "horario" TYPE VARCHAR(255);
+
+COMMIT;
