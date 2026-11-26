@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { animalesApi, especiesApi } from "../services/api.js";
-import { animalFormSchema, SEXOS,ESTADOS, ESTADOS_INICIALES, EDAD_MAXIMA, PESO_MAXIMO, fechaMinimaNacimiento, MAX_CAMBIOS } 
-from "../schemas/animal.schema.js";
+import {
+  animalFormSchema, SEXOS, ESTADOS_INICIALES, ESTADOS_MANUALES, ESTADOS_BLOQUEADOS,
+  EDAD_MAXIMA, PESO_MAXIMO, MAX_CAMBIOS, MAX_CAMBIOS_FECHA, fechaMinimaNacimiento,
+} from "../schemas/animal.schema.js";
 import { estilosUI } from "../components/EstilosUI.jsx";
 
 const FORMULARIO_VACIO = {
@@ -55,11 +57,13 @@ const COLOR_ESTADO = {
   EN_EVALUACION: "bg-amber-100 text-amber-800",
   CUARENTENA: "bg-orange-100 text-orange-800",
   EN_TRATAMIENTO: "bg-red-100 text-red-700",
-  EN_ADOPCION: "bg-sky-100 text-sky-800",
+  ADOPTABLE: "bg-sky-100 text-sky-800",
+  EN_ADOPCION: "bg-indigo-100 text-indigo-800",
   ADOPTADO: "bg-emerald-100 text-emerald-800",
-  OTRO: "bg-slate-100 text-slate-700",
+  NO_ADOPTABLE: "bg-rose-100 text-rose-800",
+  FALLECIDO: "bg-slate-200 text-slate-700",
+  EXTRAVIADO: "bg-purple-100 text-purple-800",
 };
-
 // Etiqueta + campo + mensaje de error
 function Campo({ id, etiqueta, error, children }) {
   return (
@@ -71,11 +75,12 @@ function Campo({ id, etiqueta, error, children }) {
   );
 }
 
-function AvisoIntentos({ definido, usados, campo }) {
-  const quedan = MAX_CAMBIOS - usados;
-  let texto = `Te quedan ${quedan} de ${MAX_CAMBIOS} cambios de ${campo}`;
+//muestra cuantos intentos le quedan al editar
+function AvisoIntentos({ definido, usados, campo, maximo = MAX_CAMBIOS }) {
+  const quedan = maximo - usados;
+  let texto = `Te quedan ${quedan} de ${maximo} cambios de ${campo}`;
   if (!definido) texto = `Definir ${campo} por primera vez no gasta intentos`;
-  else if (quedan <= 0) texto = `Ya se cambió ${MAX_CAMBIOS} veces, no se puede modificar`;
+  else if (quedan <= 0) texto = `Ya se cambió ${maximo} ${maximo === 1 ? "vez" : "veces"}, no se puede modificar`;
 
   return <p className="mt-1 text-xs text-slate-500">{texto}</p>;
 }
@@ -131,6 +136,8 @@ function AnimalesPage() {
 
   // solo se ejecuta si el schema aprobó los datos
   const guardar = async (datos) => {
+    if (datos.estado === "FALLECIDO" && !window.confirm("¿Seguro? Un animal fallecido no se puede volver a editar, adoptar ni asignar.")) return;
+    if (datos.estado === "EXTRAVIADO" && !window.confirm("¿Seguro? Quedará bloqueado hasta marcarlo como encontrado.")) return;
     try {
       if (editandoId) {
         await animalesApi.actualizar(editandoId, datos);
@@ -164,6 +171,16 @@ function AnimalesPage() {
     }
   };
 
+  const handleEncontrado = async (animal) => {
+    if (!window.confirm(`¿${animal.nombre || "El animal"} fue encontrado? Volverá a evaluación.`)) return;
+    try {
+      await animalesApi.encontrado(animal.id);
+      await cargarDatos();
+    } catch (err) {
+      setError(`No se pudo actualizar: ${err.message}`);
+    }
+  };
+
   const especieElegida = especies.find((especie) => String(especie.id) === String(watch("especieId")));
   const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
   const maxPeso = PESO_MAXIMO[especieElegida?.nombre] ?? 200;
@@ -179,6 +196,14 @@ function AnimalesPage() {
 
   const chipDefinido = Boolean(animalEditando?.numeroChip);
   const chipBloqueado = chipDefinido && animalEditando.cambioChip >= MAX_CAMBIOS;
+
+  const fechaDefinida = Boolean(animalEditando?.fechaNacimiento);
+  const fechaBloqueada = fechaDefinida && animalEditando.cambioFechaNacimiento >= MAX_CAMBIOS_FECHA;
+
+  // registrar: estados iniciales; con solicitud en curso: solo fallecido/extraviado; al editar: los manuales
+  let opcionesEstado = ESTADOS_INICIALES;
+  if (animalEditando?.estado === "EN_ADOPCION") opcionesEstado = ["EN_ADOPCION", "FALLECIDO", "EXTRAVIADO"];
+  else if (animalEditando) opcionesEstado = ESTADOS_MANUALES;
 
   // peso: corta los decimales extra antes de que react-hook-form lea el valor
   const registroPeso = register("peso", {
@@ -251,23 +276,26 @@ function AnimalesPage() {
                   ))}
                 </select>
               )}
-              {animalEditando && (
-                <p className="mt-1 text-xs text-slate-500">
-                 {animalEditando && <AvisoIntentos definido={sexoDefinido} usados={animalEditando.cambioSexo} campo="sexo" />}
-                </p>
-              )}
+              {animalEditando && <AvisoIntentos definido={sexoDefinido} usados={animalEditando.cambioSexo} campo="sexo" />}
             </Campo>
 
             <Campo id="fechaNacimiento" etiqueta="Fecha nacimiento (estimada)" error={errors.fechaNacimiento}>
-              <input
-                id="fechaNacimiento"
-                type="date"
-                {...register("fechaNacimiento")}
-                min={minNacimiento}
-                max={hoy}
-                title={especieElegida ? `Un ${especieElegida.nombre.toLowerCase()} no puede superar los ${EDAD_MAXIMA[especieElegida.nombre]} años` : undefined}
-                className={estiloCampo}
-              />
+              {fechaBloqueada ? (
+                <input id="fechaNacimiento" value={formatearFecha(animalEditando.fechaNacimiento)} disabled className={estiloBloqueado} />
+              ) : (
+                <input
+                  id="fechaNacimiento"
+                  type="date"
+                  {...register("fechaNacimiento")}
+                  min={minNacimiento}
+                  max={hoy}
+                  title={especieElegida ? `Un ${especieElegida.nombre.toLowerCase()} no puede superar los ${EDAD_MAXIMA[especieElegida.nombre]} años` : undefined}
+                  className={estiloCampo}
+                />
+              )}
+              {animalEditando && (
+                <AvisoIntentos definido={fechaDefinida} usados={animalEditando.cambioFechaNacimiento} campo="fecha" maximo={MAX_CAMBIOS_FECHA} />
+              )}
             </Campo>
 
             <Campo id="peso" etiqueta="Peso (kg)" error={errors.peso}>
@@ -286,7 +314,7 @@ function AnimalesPage() {
 
             <Campo id="estado" etiqueta="Estado" error={errors.estado}>
               <select id="estado" {...register("estado")} className={`${estiloCampo} capitalize`}>
-                {(editandoId ? ESTADOS : ESTADOS_INICIALES).map((estado) => (
+              {opcionesEstado.map((estado) => (
                   <option key={estado} value={estado}>{formatearEnum(estado)}</option>
                 ))}
               </select>
@@ -411,21 +439,33 @@ function AnimalesPage() {
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
                       <td className="px-3 py-3">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? COLOR_ESTADO.OTRO}`}
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`}
                         >
                           {formatearEnum(animal.estado)}
                         </span>
                       </td>
                       <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>
-                      <td className="px-3 py-3">
+                                           <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEditar(animal)}
-                            className="cursor-pointer rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100"
-                          >
-                            Editar
-                          </button>
+                          {animal.estado === "EXTRAVIADO" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleEncontrado(animal)}
+                              className="cursor-pointer rounded-md border border-emerald-300 px-3 py-1 text-emerald-700 hover:bg-emerald-50"
+                            >
+                              Encontrado
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleEditar(animal)}
+                              disabled={ESTADOS_BLOQUEADOS.includes(animal.estado)}
+                              title={ESTADOS_BLOQUEADOS.includes(animal.estado) ? "Este animal ya no está en el refugio" : undefined}
+                              className="cursor-pointer rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Editar
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleEliminar(animal)}
