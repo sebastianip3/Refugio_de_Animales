@@ -1,23 +1,19 @@
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { animalesApi, especiesApi } from "../services/api.js";
+import {
+  animalFormSchema, SEXOS, ESTADOS_INICIALES, ESTADOS_MANUALES, ESTADOS_BLOQUEADOS,
+  EDAD_MAXIMA, PESO_MAXIMO, MAX_CAMBIOS, MAX_CAMBIOS_FECHA, fechaMinimaNacimiento,
+} from "../schemas/animal.schema.js";
 import { estilosUI } from "../components/EstilosUI.jsx";
-
-const SEXOS = ["DESCONOCIDO", "MACHO", "HEMBRA"];
-const ESTADOS = [
-  "EN_EVALUACION",
-  "CUARENTENA",
-  "EN_TRATAMIENTO",
-  "EN_ADOPCION",
-  "ADOPTADO",
-  "OTRO",
-];
 
 const FORMULARIO_VACIO = {
   nombre: "",
   especieId: "",
   sexo: "DESCONOCIDO",
   fechaNacimiento: "",
-  peso: "",
+  peso: null,
   estado: "EN_EVALUACION",
   tieneChip: false,
   numeroChip: "",
@@ -32,44 +28,14 @@ const hoy = new Date().toLocaleDateString("en-CA");
 
 const formatearFecha = (fecha) => (fecha ? fecha.slice(0, 10).split("-").reverse().join("-") : "-");
 
-const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
-
-function fechaMinimaNacimiento(nombreEspecie) {
-  const edadMaxima = EDAD_MAXIMA[nombreEspecie];
-  if (!edadMaxima) return undefined;
-
-  const fecha = new Date();
-  fecha.setFullYear(fecha.getFullYear() - edadMaxima);
-  return fecha.toLocaleDateString("en-CA");
-}
-
-// El formulario trabaja con strings; el backend espera números y null
-function aPayload(formulario) {
-  const textoONull = (valor) => (valor.trim() === "" ? null : valor.trim());
-  const numeroONull = (valor) => (valor === "" ? null : Number(valor));
-
-  return {
-    nombre: textoONull(formulario.nombre),
-    especieId: Number(formulario.especieId),
-    sexo: formulario.sexo,
-    fechaNacimiento: formulario.fechaNacimiento || null,
-    peso: numeroONull(formulario.peso),
-    estado: formulario.estado,
-    tieneChip: formulario.tieneChip,
-    numeroChip: formulario.tieneChip ? textoONull(formulario.numeroChip) : null,
-    fotografiaUrl: textoONull(formulario.fotografiaUrl),
-    estadoGeneral: textoONull(formulario.estadoGeneral),
-    observaciones: textoONull(formulario.observaciones),
-  };
-}
-
+// Convierte un animal de la BD a los valores del formulario
 function aFormulario(animal) {
   return {
     nombre: animal.nombre ?? "",
     especieId: String(animal.especieId),
     sexo: animal.sexo,
     fechaNacimiento: animal.fechaNacimiento ? animal.fechaNacimiento.slice(0, 10) : "",
-    peso: animal.peso ?? "",
+    peso: animal.peso ?? null,
     estado: animal.estado,
     tieneChip: animal.tieneChip ?? false,
     numeroChip: animal.numeroChip ?? "",
@@ -84,25 +50,63 @@ const estiloEtiqueta = estilosUI.etiqueta;
 const estiloCampo = estilosUI.campo;
 const estiloBotonPrincipal = estilosUI.botonPrincipal;
 const estiloBotonSecundario = estilosUI.botonSecundario;
+const estiloBloqueado = `${estiloCampo} bg-slate-100 text-slate-500`;
 
 // Color de la etiqueta según el estado del animal
 const COLOR_ESTADO = {
   EN_EVALUACION: "bg-amber-100 text-amber-800",
   CUARENTENA: "bg-orange-100 text-orange-800",
   EN_TRATAMIENTO: "bg-red-100 text-red-700",
-  EN_ADOPCION: "bg-sky-100 text-sky-800",
+  ADOPTABLE: "bg-sky-100 text-sky-800",
+  EN_ADOPCION: "bg-indigo-100 text-indigo-800",
   ADOPTADO: "bg-emerald-100 text-emerald-800",
-  OTRO: "bg-slate-100 text-slate-700",
+  NO_ADOPTABLE: "bg-rose-100 text-rose-800",
+  FALLECIDO: "bg-slate-200 text-slate-700",
+  EXTRAVIADO: "bg-purple-100 text-purple-800",
 };
+// Etiqueta + campo + mensaje de error
+function Campo({ id, etiqueta, error, children }) {
+  return (
+    <div>
+      <label htmlFor={id} className={estiloEtiqueta}>{etiqueta}</label>
+      {children}
+      {error && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
+    </div>
+  );
+}
+
+//muestra cuantos intentos le quedan al editar
+function AvisoIntentos({ definido, usados, campo, maximo = MAX_CAMBIOS }) {
+  const quedan = maximo - usados;
+  let texto = `Te quedan ${quedan} de ${maximo} cambios de ${campo}`;
+  if (!definido) texto = `Definir ${campo} por primera vez no gasta intentos`;
+  else if (quedan <= 0) texto = `Ya se cambió ${maximo} ${maximo === 1 ? "vez" : "veces"}, no se puede modificar`;
+
+  return <p className="mt-1 text-xs text-slate-500">{texto}</p>;
+}
 
 function AnimalesPage() {
   const [animales, setAnimales] = useState([]);
   const [especies, setEspecies] = useState([]);
-  const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
   const [editandoId, setEditandoId] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    // el schema depende de la especie elegida
+    resolver: (valores, contexto, opciones) => {
+      const especie = especies.find((e) => String(e.id) === String(valores.especieId));
+      return zodResolver(animalFormSchema(especie?.nombre))(valores, contexto, opciones);
+    },
+    mode: "onTouched",
+    defaultValues: FORMULARIO_VACIO,
+  });
 
   const cargarDatos = async () => {
     try {
@@ -125,45 +129,31 @@ function AnimalesPage() {
     cargarDatos();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    setFormulario({
-      ...formulario,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
-
   const limpiarFormulario = () => {
-    setFormulario(FORMULARIO_VACIO);
+    reset(FORMULARIO_VACIO);
     setEditandoId(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  // solo se ejecuta si el schema aprobó los datos
+  const guardar = async (datos) => {
+    if (datos.estado === "FALLECIDO" && !window.confirm("¿Seguro? Un animal fallecido no se puede volver a editar, adoptar ni asignar.")) return;
+    if (datos.estado === "EXTRAVIADO" && !window.confirm("¿Seguro? Quedará bloqueado hasta marcarlo como encontrado.")) return;
     try {
-      setGuardando(true);
-      const payload = aPayload(formulario);
-
       if (editandoId) {
-        await animalesApi.actualizar(editandoId, payload);
+        await animalesApi.actualizar(editandoId, datos);
       } else {
-        await animalesApi.crear(payload);
+        await animalesApi.crear(datos);
       }
-
       limpiarFormulario();
       await cargarDatos();
     } catch (err) {
       setError(`No se pudo guardar: ${err.message}`);
-    } finally {
-      setGuardando(false);
     }
   };
 
   const handleEditar = (animal) => {
     setEditandoId(animal.id);
-    setFormulario(aFormulario(animal));
+    reset(aFormulario(animal));
     setError("");
     window.scrollTo({ top: 0, behavior: "smooth" }); // sube al formulario
   };
@@ -181,19 +171,54 @@ function AnimalesPage() {
     }
   };
 
-  const especieElegida = especies.find((especie) => String(especie.id) === String(formulario.especieId));
-  const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
+  const handleEncontrado = async (animal) => {
+    if (!window.confirm(`¿${animal.nombre || "El animal"} fue encontrado? Volverá a evaluación.`)) return;
+    try {
+      await animalesApi.encontrado(animal.id);
+      await cargarDatos();
+    } catch (err) {
+      setError(`No se pudo actualizar: ${err.message}`);
+    }
+  };
 
-  const MaxCambioSexo = 2;
+  const especieElegida = especies.find((especie) => String(especie.id) === String(watch("especieId")));
+  const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
+  const maxPeso = PESO_MAXIMO[especieElegida?.nombre] ?? 200;
+  const tieneChip = watch("tieneChip");
+
   const animalEditando = animales.find((animal) => animal.id === editandoId);
   const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
-  const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MaxCambioSexo;
+  const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MAX_CAMBIOS;
   const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
+
+  const nombreDefinido = Boolean(animalEditando?.nombre);
+  const nombreBloqueado = nombreDefinido && animalEditando.cambioNombre >= MAX_CAMBIOS;
+
+  const chipDefinido = Boolean(animalEditando?.numeroChip);
+  const chipBloqueado = chipDefinido && animalEditando.cambioChip >= MAX_CAMBIOS;
+
+  const fechaDefinida = Boolean(animalEditando?.fechaNacimiento);
+  const fechaBloqueada = fechaDefinida && animalEditando.cambioFechaNacimiento >= MAX_CAMBIOS_FECHA;
+
+  // registrar: estados iniciales; con solicitud en curso: solo fallecido/extraviado; al editar: los manuales
+  let opcionesEstado = ESTADOS_INICIALES;
+  if (animalEditando?.estado === "EN_ADOPCION") opcionesEstado = ["EN_ADOPCION", "FALLECIDO", "EXTRAVIADO"];
+  else if (animalEditando) opcionesEstado = ESTADOS_MANUALES;
+
+  // peso: corta los decimales extra antes de que react-hook-form lea el valor
+  const registroPeso = register("peso", {
+    setValueAs: (valor) => (valor === "" || valor === null ? null : Number(valor)),
+  });
+  const cambiarPeso = (e) => {
+    const [entero, decimales] = e.target.value.split(".");
+    if (decimales?.length > 2) e.target.value = `${entero}.${decimales.slice(0, 2)}`;
+    registroPeso.onChange(e);
+  };
 
   return (
     <section className={estilosUI.pagina}>
       <div className="mx-auto max-w-7xl space-y-6">
-        {/* Encabezado */}
+       {/*encabezado*/}
         <header className={estilosUI.encabezado}>
           <h1 className={estilosUI.titulo}>🐾 Animales</h1>
           <p className={estilosUI.subtitulo}>
@@ -206,10 +231,10 @@ function AnimalesPage() {
             {error}
           </p>
         )}
-
-        {/* Formulario */}
+       {/*formulario*/}
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(guardar)}
+          noValidate
           className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
         >
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
@@ -218,192 +243,135 @@ function AnimalesPage() {
 
           {/* 1 columna en celular, 2 en tablet, 3 en pantalla grande */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label htmlFor="nombre" className={estiloEtiqueta}>Nombre</label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formulario.nombre}
-                onChange={handleChange}
-                minLength={2}
-                maxLength={30}
-                placeholder="Sin nombre"
-                className={estiloCampo}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="especieId" className={estiloEtiqueta}>Especie</label>
-              <select
-                id="especieId"
-                name="especieId"
-                value={formulario.especieId}
-                onChange={handleChange}
-                required
-                disabled={Boolean(editandoId)}
-                className={`${estiloCampo} disabled:bg-slate-100 disabled:text-slate-500`}
-              >
-                <option value="">Seleccione una especie</option>
-                {especies.map((especie) => (
-                  <option key={especie.id} value={especie.id}>
-                    {especie.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="sexo" className={estiloEtiqueta}>Sexo</label>
-              <select
-                id="sexo"
-                name="sexo"
-                value={formulario.sexo}
-                onChange={handleChange}
-                disabled={sexoBloqueado}
-                className={`${estiloCampo} capitalize disabled:bg-slate-100 disabled:text-slate-500`}
-              >
-                {opcionesSexo.map((sexo) => (
-                  <option key={sexo} value={sexo}>
-                    {formatearEnum(sexo)}
-                  </option>
-                ))}
-              </select>
-              {animalEditando && (
-                <p className="mt-1 text-xs text-slate-500">
-                  {sexoBloqueado
-                    ? "Ya se corrigió 2 veces, no se puede modificar"
-                    : `Te quedan ${MaxCambioSexo - animalEditando.cambioSexo} de ${MaxCambioSexo} correcciones de sexo`}
-                  {!sexoDefinido && " (definirlo por primera vez no gasta intentos)"}
-                </p>
+            <Campo id="nombre" etiqueta="Nombre" error={errors.nombre}>
+              {nombreBloqueado ? (
+                <input id="nombre" value={animalEditando.nombre} disabled className={estiloBloqueado} />
+              ) : (
+                <input id="nombre" {...register("nombre")} maxLength={30} placeholder="Sin nombre" className={estiloCampo} />
               )}
-            </div>
+              {animalEditando && <AvisoIntentos definido={nombreDefinido} usados={animalEditando.cambioNombre} campo="nombre" />}
+            </Campo>
 
-            <div>
-              <label htmlFor="fechaNacimiento" className={estiloEtiqueta}>Fecha nacimiento (estimada)</label>
-              <input
-                type="date"
-                id="fechaNacimiento"
-                name="fechaNacimiento"
-                value={formulario.fechaNacimiento}
-                onChange={handleChange}
-                min={minNacimiento}
-                max={hoy}
-                title={especieElegida ? `Un ${especieElegida.nombre.toLowerCase()} no puede superar los ${EDAD_MAXIMA[especieElegida.nombre]} años` : undefined}
-                className={estiloCampo}
-              />
-            </div>
+            <Campo id="especieId" etiqueta="Especie" error={errors.especieId}>
+              {editandoId ? (
+                // al editar se muestra: la especie no se puede cambiar
+                <input id="especieId" value={especieElegida?.nombre ?? ""} disabled className={estiloBloqueado} />
+              ) : (
+                <select id="especieId" {...register("especieId")} className={estiloCampo}>
+                  <option value="">Seleccione una especie</option>
+                  {especies.map((especie) => (
+                    <option key={especie.id} value={especie.id}>{especie.nombre}</option>
+                  ))}
+                </select>
+              )}
+            </Campo>
 
-            <div>
-              <label htmlFor="peso" className={estiloEtiqueta}>Peso (kg)</label>
+            <Campo id="sexo" etiqueta="Sexo" error={errors.sexo}>
+              {sexoBloqueado ? (
+                <input id="sexo" value={formatearEnum(animalEditando.sexo)} disabled className={`${estiloBloqueado} capitalize`} />
+              ) : (
+                <select id="sexo" {...register("sexo")} className={`${estiloCampo} capitalize`}>
+                  {opcionesSexo.map((sexo) => (
+                    <option key={sexo} value={sexo}>{formatearEnum(sexo)}</option>
+                  ))}
+                </select>
+              )}
+              {animalEditando && <AvisoIntentos definido={sexoDefinido} usados={animalEditando.cambioSexo} campo="sexo" />}
+            </Campo>
+
+            <Campo id="fechaNacimiento" etiqueta="Fecha nacimiento (estimada)" error={errors.fechaNacimiento}>
+              {fechaBloqueada ? (
+                <input id="fechaNacimiento" value={formatearFecha(animalEditando.fechaNacimiento)} disabled className={estiloBloqueado} />
+              ) : (
+                <input
+                  id="fechaNacimiento"
+                  type="date"
+                  {...register("fechaNacimiento")}
+                  min={minNacimiento}
+                  max={hoy}
+                  title={especieElegida ? `Un ${especieElegida.nombre.toLowerCase()} no puede superar los ${EDAD_MAXIMA[especieElegida.nombre]} años` : undefined}
+                  className={estiloCampo}
+                />
+              )}
+              {animalEditando && (
+                <AvisoIntentos definido={fechaDefinida} usados={animalEditando.cambioFechaNacimiento} campo="fecha" maximo={MAX_CAMBIOS_FECHA} />
+              )}
+            </Campo>
+
+            <Campo id="peso" etiqueta="Peso (kg)" error={errors.peso}>
               <input
-                type="number"
                 id="peso"
-                name="peso"
-                value={formulario.peso}
-                onChange={handleChange}
-                max={200}
-                step={0.5}
+                type="number"
+                {...registroPeso}
+                onChange={cambiarPeso}
+                min={0}
+                max={maxPeso}
+                step="any"
+                onKeyDown={(e) => ["-", "+", "e", "E", ","].includes(e.key) && e.preventDefault()}
                 className={estiloCampo}
               />
-            </div>
+            </Campo>
 
-            <div>
-              <label htmlFor="estado" className={estiloEtiqueta}>Estado</label>
-              <select
-                id="estado"
-                name="estado"
-                value={formulario.estado}
-                onChange={handleChange}
-                className={`${estiloCampo} capitalize`}
-              >
-                {ESTADOS.map((estado) => (
-                  <option key={estado} value={estado}>
-                    {formatearEnum(estado)}
-                  </option>
+            <Campo id="estado" etiqueta="Estado" error={errors.estado}>
+              <select id="estado" {...register("estado")} className={`${estiloCampo} capitalize`}>
+              {opcionesEstado.map((estado) => (
+                  <option key={estado} value={estado}>{formatearEnum(estado)}</option>
                 ))}
               </select>
-            </div>
+            </Campo>
 
-            <div>
-              <label htmlFor="fotografiaUrl" className={estiloEtiqueta}>URL de fotografía</label>
-              <input
-                type="url"
-                id="fotografiaUrl"
-                name="fotografiaUrl"
-                value={formulario.fotografiaUrl}
-                onChange={handleChange}
-                maxLength={500}
-                placeholder="https://..."
-                className={estiloCampo}
-              />
-            </div>
+            <Campo id="fotografiaUrl" etiqueta="URL de fotografía" error={errors.fotografiaUrl}>
+              <input id="fotografiaUrl" type="url" {...register("fotografiaUrl")} placeholder="https://..." className={estiloCampo} />
+            </Campo>
 
-            {/* Chip: el número solo aparece si se marca la casilla */}
+            {/*  el número solo aparece si se marca la casilla (chip) */}
             <div className="flex items-end gap-4">
               <label className="flex cursor-pointer items-center gap-2 py-2 text-slate-700">
-                <input
-                  type="checkbox"
-                  name="tieneChip"
-                  checked={formulario.tieneChip}
-                  onChange={handleChange}
-                  className="h-5 w-5 accent-emerald-600"
-                />
+                {chipDefinido ? (
+                  // un chip registrado no se puede quitar
+                  <input type="checkbox" checked disabled className="h-5 w-5 accent-emerald-600" />
+                ) : (
+                  <input type="checkbox" {...register("tieneChip")} className="h-5 w-5 accent-emerald-600" />
+                )}
                 Tiene chip
               </label>
             </div>
 
-            {formulario.tieneChip && (
-              <div>
-                <label htmlFor="numeroChip" className={estiloEtiqueta}>Número de chip</label>
-                <input
-                  type="text"
-                  id="numeroChip"
-                  name="numeroChip"
-                  value={formulario.numeroChip}
-                  onChange={handleChange}
-                  inputMode="numeric"
-                  pattern="\d{15}"
-                  maxLength={15}
-                  required
-                  title="El chip debe tener 15 dígitos"
-                  placeholder="15 dígitos"
-                  className={estiloCampo}
-                />
-              </div>
+            {tieneChip && (
+              <Campo id="numeroChip" etiqueta="Número de chip" error={errors.numeroChip}>
+                {chipBloqueado ? (
+                  <input id="numeroChip" value={animalEditando.numeroChip} disabled className={estiloBloqueado} />
+                ) : (
+                  <input
+                    id="numeroChip"
+                    {...register("numeroChip")}
+                    inputMode="numeric"
+                    maxLength={15}
+                    placeholder="15 dígitos"
+                    className={estiloCampo}
+                  />
+                )}
+                {animalEditando && <AvisoIntentos definido={chipDefinido} usados={animalEditando.cambioChip} campo="chip" />}
+              </Campo>
             )}
 
             {/* Los textos largos ocupan todo el ancho */}
             <div className="sm:col-span-2 lg:col-span-3">
-              <label htmlFor="estadoGeneral" className={estiloEtiqueta}>Estado general</label>
-              <textarea
-                id="estadoGeneral"
-                name="estadoGeneral"
-                value={formulario.estadoGeneral}
-                onChange={handleChange}
-                maxLength={300}
-                rows={2}
-                className={estiloCampo}
-              />
+              <Campo id="estadoGeneral" etiqueta="Estado general" error={errors.estadoGeneral}>
+                <textarea id="estadoGeneral" {...register("estadoGeneral")} rows={2} className={estiloCampo} />
+              </Campo>
             </div>
 
             <div className="sm:col-span-2 lg:col-span-3">
-              <label htmlFor="observaciones" className={estiloEtiqueta}>Observaciones</label>
-              <textarea
-                id="observaciones"
-                name="observaciones"
-                value={formulario.observaciones}
-                onChange={handleChange}
-                maxLength={300}
-                rows={2}
-                className={estiloCampo}
-              />
+              <Campo id="observaciones" etiqueta="Observaciones" error={errors.observaciones}>
+                <textarea id="observaciones" {...register("observaciones")} rows={2} className={estiloCampo} />
+              </Campo>
             </div>
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button type="submit" disabled={guardando} className={estiloBotonPrincipal}>
-              {guardando ? "Guardando..." : editandoId ? "Guardar cambios" : "Registrar"}
+            <button type="submit" disabled={isSubmitting} className={estiloBotonPrincipal}>
+              {isSubmitting ? "Guardando..." : editandoId ? "Guardar cambios" : "Registrar"}
             </button>
             {editandoId && (
               <button type="button" onClick={limpiarFormulario} className={estiloBotonSecundario}>
@@ -446,8 +414,7 @@ function AnimalesPage() {
                   {animales.map((animal) => (
                     <tr
                       key={animal.id}
-                      className={`border-b border-slate-100 hover:bg-slate-50 ${editandoId === animal.id ? "bg-emerald-50" : ""
-                        }`}
+                      className={`border-b border-slate-100 hover:bg-slate-50 ${editandoId === animal.id ? "bg-emerald-50" : ""}`}
                     >
                       <td className="px-3 py-3 text-slate-500">{animal.id}</td>
                       <td className="px-3 py-3">
@@ -472,22 +439,33 @@ function AnimalesPage() {
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
                       <td className="px-3 py-3">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? COLOR_ESTADO.OTRO
-                            }`}
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`}
                         >
                           {formatearEnum(animal.estado)}
                         </span>
                       </td>
                       <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>
-                      <td className="px-3 py-3">
+                                           <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEditar(animal)}
-                            className="cursor-pointer rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100"
-                          >
-                            Editar
-                          </button>
+                          {animal.estado === "EXTRAVIADO" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleEncontrado(animal)}
+                              className="cursor-pointer rounded-md border border-emerald-300 px-3 py-1 text-emerald-700 hover:bg-emerald-50"
+                            >
+                              Encontrado
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleEditar(animal)}
+                              disabled={ESTADOS_BLOQUEADOS.includes(animal.estado)}
+                              title={ESTADOS_BLOQUEADOS.includes(animal.estado) ? "Este animal ya no está en el refugio" : undefined}
+                              className="cursor-pointer rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Editar
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleEliminar(animal)}

@@ -68,7 +68,6 @@ const CAMPOS_TEXTO = [
   { nombre: "observaciones", etiqueta: "Observaciones adicionales", maximo: 200 },
 ];
 
-
 // Detalles de un registro que se muestran solo si tienen valor
 const DETALLES_REGISTRO = [
   { campo: "diagnostico", etiqueta: "Diagnóstico" },
@@ -389,7 +388,7 @@ function HistorialPage({ cuenta }) {
                     </div>
 
                     <span
-                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${ESTILO_ESTADO_ANIMAL[animal.estado] ?? ESTILO_ESTADO_ANIMAL.OTRO
+                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${ESTILO_ESTADO_ANIMAL[animal.estado] ?? ""
                         }`}
                     >
                       {formatearEnum(animal.estado)}

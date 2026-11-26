@@ -18,5 +18,8 @@ export const ESTILO_ESTADO_ANIMAL = {
   EN_TRATAMIENTO: "bg-rose-50 text-rose-700 ring-rose-200",
   EN_ADOPCION: "bg-violet-50 text-violet-700 ring-violet-200",
   ADOPTADO: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  OTRO: "bg-slate-100 text-slate-600 ring-slate-200",
+  ADOPTABLE: "bg-sky-50 text-sky-700 ring-sky-200",
+  NO_ADOPTABLE: "bg-rose-50 text-rose-700 ring-rose-200",
+  FALLECIDO: "bg-slate-100 text-slate-600 ring-slate-200",
+  EXTRAVIADO: "bg-purple-50 text-purple-700 ring-purple-200",
 };

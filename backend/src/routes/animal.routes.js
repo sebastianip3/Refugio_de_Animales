@@ -6,6 +6,7 @@ import {
   crearAnimal,
   actualizarAnimal,
   eliminarAnimal,
+  marcarEncontrado,
 } from '../controllers/animal.controller.js';
 
 const permisoActualizar = [autenticar, autorizar('ADMINISTRADOR', 'TRABAJADOR', 'VOLUNTARIO', 'ENCARGADO_ADOPCIONES')];
@@ -17,6 +18,7 @@ const router = Router();
 router.get('/', listarAnimales);
 router.get('/:id', obtenerAnimal);
 router.post('/', permisoCrear, crearAnimal);
+router.patch('/:id/encontrado', permisoActualizar, marcarEncontrado);
 router.patch('/:id', permisoActualizar, actualizarAnimal);
 router.delete('/:id', permisoEliminar, eliminarAnimal);
 

@@ -57,7 +57,7 @@ const animalesDemo = [
     sexo: 'HEMBRA',
     fechaNacimiento: new Date('2023-05-10'),
     peso: 14.5,
-    estado: 'EN_ADOPCION',
+    estado: 'ADOPTABLE',
     registrosClinicos: [
       {
         fecha: new Date('2026-06-02'),
@@ -85,7 +85,7 @@ const animalesDemo = [
     sexo: 'MACHO',
     fechaNacimiento: new Date('2025-03-15'),
     peso: 3.2,
-    estado: 'EN_ADOPCION',
+    estado: 'ADOPTABLE',
     registrosClinicos: [
       {
         fecha: new Date('2026-08-15'),
