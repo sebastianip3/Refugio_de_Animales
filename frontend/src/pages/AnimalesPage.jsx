@@ -2,16 +2,9 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { animalesApi, especiesApi } from "../services/api.js";
+import { animalFormSchema, SEXOS,ESTADOS, ESTADOS_INICIALES, EDAD_MAXIMA, PESO_MAXIMO, fechaMinimaNacimiento, MAX_CAMBIOS } 
+from "../schemas/animal.schema.js";
 import { estilosUI } from "../components/EstilosUI.jsx";
-import {
-  animalFormSchema,
-  SEXOS,
-  ESTADOS,
-  ESTADOS_INICIALES,
-  EDAD_MAXIMA,
-  PESO_MAXIMO,
-  fechaMinimaNacimiento,
-} from "../schemas/animal.schema.js";
 
 const FORMULARIO_VACIO = {
   nombre: "",
@@ -26,8 +19,6 @@ const FORMULARIO_VACIO = {
   estadoGeneral: "",
   observaciones: "",
 };
-
-const MAX_CAMBIO_SEXO = 2;
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
 
@@ -78,6 +69,15 @@ function Campo({ id, etiqueta, error, children }) {
       {error && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
     </div>
   );
+}
+
+function AvisoIntentos({ definido, usados, campo }) {
+  const quedan = MAX_CAMBIOS - usados;
+  let texto = `Te quedan ${quedan} de ${MAX_CAMBIOS} cambios de ${campo}`;
+  if (!definido) texto = `Definir ${campo} por primera vez no gasta intentos`;
+  else if (quedan <= 0) texto = `Ya se cambió ${MAX_CAMBIOS} veces, no se puede modificar`;
+
+  return <p className="mt-1 text-xs text-slate-500">{texto}</p>;
 }
 
 function AnimalesPage() {
@@ -171,8 +171,24 @@ function AnimalesPage() {
 
   const animalEditando = animales.find((animal) => animal.id === editandoId);
   const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
-  const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MAX_CAMBIO_SEXO;
+  const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MAX_CAMBIOS;
   const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
+
+  const nombreDefinido = Boolean(animalEditando?.nombre);
+  const nombreBloqueado = nombreDefinido && animalEditando.cambioNombre >= MAX_CAMBIOS;
+
+  const chipDefinido = Boolean(animalEditando?.numeroChip);
+  const chipBloqueado = chipDefinido && animalEditando.cambioChip >= MAX_CAMBIOS;
+
+  // peso: corta los decimales extra antes de que react-hook-form lea el valor
+  const registroPeso = register("peso", {
+    setValueAs: (valor) => (valor === "" || valor === null ? null : Number(valor)),
+  });
+  const cambiarPeso = (e) => {
+    const [entero, decimales] = e.target.value.split(".");
+    if (decimales?.length > 2) e.target.value = `${entero}.${decimales.slice(0, 2)}`;
+    registroPeso.onChange(e);
+  };
 
   return (
     <section className={estilosUI.pagina}>
@@ -203,7 +219,12 @@ function AnimalesPage() {
           {/* 1 columna en celular, 2 en tablet, 3 en pantalla grande */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Campo id="nombre" etiqueta="Nombre" error={errors.nombre}>
-              <input id="nombre" {...register("nombre")} maxLength={30} placeholder="Sin nombre" className={estiloCampo} />
+              {nombreBloqueado ? (
+                <input id="nombre" value={animalEditando.nombre} disabled className={estiloBloqueado} />
+              ) : (
+                <input id="nombre" {...register("nombre")} maxLength={30} placeholder="Sin nombre" className={estiloCampo} />
+              )}
+              {animalEditando && <AvisoIntentos definido={nombreDefinido} usados={animalEditando.cambioNombre} campo="nombre" />}
             </Campo>
 
             <Campo id="especieId" etiqueta="Especie" error={errors.especieId}>
@@ -232,10 +253,7 @@ function AnimalesPage() {
               )}
               {animalEditando && (
                 <p className="mt-1 text-xs text-slate-500">
-                  {sexoBloqueado
-                    ? "Ya se corrigió 2 veces, no se puede modificar"
-                    : `Te quedan ${MAX_CAMBIO_SEXO - animalEditando.cambioSexo} de ${MAX_CAMBIO_SEXO} correcciones de sexo`}
-                  {!sexoDefinido && " (definirlo por primera vez no gasta intentos)"}
+                 {animalEditando && <AvisoIntentos definido={sexoDefinido} usados={animalEditando.cambioSexo} campo="sexo" />}
                 </p>
               )}
             </Campo>
@@ -256,7 +274,8 @@ function AnimalesPage() {
               <input
                 id="peso"
                 type="number"
-                {...register("peso", { setValueAs: (valor) => (valor === "" || valor === null ? null : Number(valor)) })}
+                {...registroPeso}
+                onChange={cambiarPeso}
                 min={0}
                 max={maxPeso}
                 step="any"
@@ -280,21 +299,31 @@ function AnimalesPage() {
             {/*  el número solo aparece si se marca la casilla (chip) */}
             <div className="flex items-end gap-4">
               <label className="flex cursor-pointer items-center gap-2 py-2 text-slate-700">
-                <input type="checkbox" {...register("tieneChip")} className="h-5 w-5 accent-emerald-600" />
+                {chipDefinido ? (
+                  // un chip registrado no se puede quitar
+                  <input type="checkbox" checked disabled className="h-5 w-5 accent-emerald-600" />
+                ) : (
+                  <input type="checkbox" {...register("tieneChip")} className="h-5 w-5 accent-emerald-600" />
+                )}
                 Tiene chip
               </label>
             </div>
 
             {tieneChip && (
               <Campo id="numeroChip" etiqueta="Número de chip" error={errors.numeroChip}>
-                <input
-                  id="numeroChip"
-                  {...register("numeroChip")}
-                  inputMode="numeric"
-                  maxLength={15}
-                  placeholder="15 dígitos"
-                  className={estiloCampo}
-                />
+                {chipBloqueado ? (
+                  <input id="numeroChip" value={animalEditando.numeroChip} disabled className={estiloBloqueado} />
+                ) : (
+                  <input
+                    id="numeroChip"
+                    {...register("numeroChip")}
+                    inputMode="numeric"
+                    maxLength={15}
+                    placeholder="15 dígitos"
+                    className={estiloCampo}
+                  />
+                )}
+                {animalEditando && <AvisoIntentos definido={chipDefinido} usados={animalEditando.cambioChip} campo="chip" />}
               </Campo>
             )}
 
