@@ -74,7 +74,10 @@ const ESTILO_ESTADO_ANIMAL = {
   EN_TRATAMIENTO: "bg-rose-50 text-rose-700 ring-rose-200",
   EN_ADOPCION: "bg-violet-50 text-violet-700 ring-violet-200",
   ADOPTADO: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  OTRO: "bg-slate-100 text-slate-600 ring-slate-200",
+  ADOPTABLE: "bg-sky-50 text-sky-700 ring-sky-200",
+  NO_ADOPTABLE: "bg-rose-50 text-rose-700 ring-rose-200",
+  FALLECIDO: "bg-slate-100 text-slate-600 ring-slate-200",
+  EXTRAVIADO: "bg-purple-50 text-purple-700 ring-purple-200",
 };
 
 // Detalles de un registro que se muestran solo si tienen valor
@@ -334,7 +337,7 @@ function HistorialPage({ cuenta }) {
                     </div>
 
                     <span
-                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${ESTILO_ESTADO_ANIMAL[animal.estado] ?? ESTILO_ESTADO_ANIMAL.OTRO
+                      className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${ESTILO_ESTADO_ANIMAL[animal.estado] ?? ""
                         }`}
                     >
                       {formatearEnum(animal.estado)}

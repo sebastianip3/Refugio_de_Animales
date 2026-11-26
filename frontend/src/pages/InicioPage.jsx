@@ -70,7 +70,7 @@ function InicioPage({ cuenta, onNavegar }) {
         registrados: animales.length,
 
         enAdopcion: animales.filter(
-          (animal) => animal.estado === "EN_ADOPCION"
+          (animal) => animal.estado === "ADOPTABLE"
         ).length,
 
         enProceso: new Set(animalesConSolicitud).size,
