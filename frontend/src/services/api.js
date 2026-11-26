@@ -37,6 +37,7 @@ export const animalesApi = {
   actualizar: (id, animal) =>
     request(`/animales/${id}`, { method: "PATCH", body: JSON.stringify(animal) }),
   eliminar: (id) => request(`/animales/${id}`, { method: "DELETE" }),
+  encontrado: (id) => request(`/animales/${id}/encontrado`, { method: "PATCH" }),
 };
 
 // Solo el veterinario (o un administrador) puede crear y editar registros
