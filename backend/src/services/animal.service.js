@@ -4,6 +4,7 @@ import { AppError } from '../utils/app-error.js';
 const ESTADOS_INICIALES = ['EN_EVALUACION', 'CUARENTENA', 'EN_TRATAMIENTO'];
 const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
 const PESO_MAXIMO = { Perro: 200, Gato: 25 };
+const MAX_CAMBIOS = 2;
 
 // la fecha de nacimiento no puede ser futura ni superar la edad máxima de su especie
 async function validarFechaNacimiento(especieId, fechaNacimiento) {
@@ -73,8 +74,6 @@ export async function actualizarAnimal(id, data) {
   }
 
   const especieId = data.especieId ?? actual.especieId;
-
-  const MaxCambioSexo = 2;
   
   if (data.sexo && data.sexo !== actual.sexo) {
     // una vez definido no puede volver a desconocido 
@@ -84,10 +83,34 @@ export async function actualizarAnimal(id, data) {
 
     // solo cuenta si ya tenía sexo definido 
     if (actual.sexo !== 'DESCONOCIDO') {
-      if (actual.cambioSexo >= MaxCambioSexo) {
-        throw new AppError(409, `El sexo ya se corrigió ${MaxCambioSexo} veces y no se puede volver a cambiar`);
+      if (actual.cambioSexo >= MAX_CAMBIOS) {
+        throw new AppError(409, `El sexo ya se corrigió ${MAX_CAMBIOS} veces y no se puede volver a cambiar`);
       }
       data.cambioSexo = actual.cambioSexo + 1;
+    }
+  }
+
+  // al editar nombre tiene hasta 2 intentos
+  if (data.nombre !== undefined && data.nombre !== actual.nombre && actual.nombre) {
+    if (!data.nombre) {
+      throw new AppError(409, 'Un animal con nombre no puede quedar sin nombre');
+    }
+    if (actual.cambioNombre >= MAX_CAMBIOS) {
+      throw new AppError(409, `El nombre ya se cambió ${MAX_CAMBIOS} veces y no se puede volver a cambiar`);
+    }
+    data.cambioNombre = actual.cambioNombre + 1;
+  }
+
+  // al editar chip tiene hasta 2 intentos
+  if (actual.numeroChip) {
+    if (data.tieneChip === false || data.numeroChip === null) {
+      throw new AppError(409, 'Un animal con chip registrado no puede quedar sin chip');
+    }
+    if (data.numeroChip !== undefined && data.numeroChip !== actual.numeroChip) {
+      if (actual.cambioChip >= MAX_CAMBIOS) {
+        throw new AppError(409, `El chip ya se corrigió ${MAX_CAMBIOS} veces y no se puede volver a cambiar`);
+      }
+      data.cambioChip = actual.cambioChip + 1;
     }
   }
 
