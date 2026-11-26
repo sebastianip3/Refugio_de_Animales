@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -11,8 +11,8 @@ import {
   formatearTelefono,
   TIPOS_VIVIENDA,
 } from "../schemas/adopcion.schema.js";
-import { hoyComoTexto } from "../schemas/registroClinico.schema.js";
-import { puedeEvaluarAdopciones } from "../utils.js";
+import { hoyComoTexto, nombreVeterinario } from "../schemas/registroClinico.schema.js";
+import { ESTILO_ESTADO_ANIMAL, puedeEvaluarAdopciones } from "../utils.js";
 
 // Botones de la evaluación. No hay "Cancelar": cumple la misma función que "Rechazar"
 const ACCIONES = {
@@ -43,6 +43,9 @@ const ESTILO_ACCION = {
 };
 
 const FILTROS = ["TODAS", "PENDIENTE", "EN_REVISION", "APROBADA", "RECHAZADA"];
+
+// Solicitudes visibles en la tabla; el resto se ve deslizando dentro de la tabla
+const SOLICITUDES_VISIBLES = 15;
 
 const FORMULARIO_VACIO = {
   animalId: "",
@@ -157,8 +160,10 @@ function Aviso({ tipo, children }) {
 // La fecha se guarda a medianoche UTC: "AAAA-MM-DD" → "DD-MM-AAAA" sin desfase de zona horaria
 const formatearFechaVisita = (fecha) => fecha.slice(0, 10).split("-").reverse().join("-");
 
-// Días mínimos entre la adopción y la visita (igual que en el backend)
-const DIAS_MINIMOS_VISITA = 15;
+// La visita se puede agendar desde el día siguiente a la adopción (igual que en el backend),
+// pero se sugiere automáticamente 15 días después de la adopción
+const DIAS_MINIMOS_VISITA = 1;
+const DIAS_VISITA_SUGERIDA = 15;
 
 // Horarios fijos de visita (igual que en el backend). Son pocos porque entre una visita y otra
 // hay que viajar de una comuna a otra
@@ -198,19 +203,25 @@ const aTextoFecha = (fecha) =>
 // Al aprobar, el animal registra su egreso: esa es la fecha de la adopción
 const fechaDeAdopcion = (adopcion) => new Date(adopcion.animal?.fechaEgreso ?? adopcion.updatedAt);
 
-// Primer día en que se puede agendar la visita: 15 días después de la adopción
-const fechaMinimaVisita = (adopcion) => {
+// "AAAA-MM-DD" de N días después de la adopción
+const diasDespuesDeAdopcion = (adopcion, dias) => {
   const base = fechaDeAdopcion(adopcion);
-  return aTextoFecha(new Date(base.getFullYear(), base.getMonth(), base.getDate() + DIAS_MINIMOS_VISITA));
+  return aTextoFecha(new Date(base.getFullYear(), base.getMonth(), base.getDate() + dias));
 };
 
+// Primer día en que se puede agendar la visita: el día siguiente a la adopción
+const fechaMinimaVisita = (adopcion) => diasDespuesDeAdopcion(adopcion, DIAS_MINIMOS_VISITA);
+
 // Visitas post adopción: el encargado agenda una visita después de aprobar la adopción.
-// Solo desde 15 días después de la adopción y una a la vez
+// Desde el día siguiente a la adopción (se sugiere 15 días después) y una a la vez
 // onCambio avisa a la página que cambiaron las visitas (para actualizar "Próximas visitas")
 // visitasAgendadas: próximas visitas de todas las adopciones, para no repetir un horario ocupado
 function VisitasAdopcion({ adopcion, visitasAgendadas = [], onAdopcionRechazada, onCambio }) {
   const [visitas, setVisitas] = useState([]);
+  const [visitasCargadas, setVisitasCargadas] = useState(false);
   const [fecha, setFecha] = useState("");
+  // La fecha sugerida se pone una sola vez, al abrir el seguimiento
+  const fechaSugeridaPuesta = useRef(false);
   const [hora, setHora] = useState("");
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
@@ -224,7 +235,11 @@ function VisitasAdopcion({ adopcion, visitasAgendadas = [], onAdopcionRechazada,
 
     adopcionesApi
       .listarVisitas(adopcion.id)
-      .then((lista) => activo && setVisitas(lista))
+      .then((lista) => {
+        if (!activo) return;
+        setVisitas(lista);
+        setVisitasCargadas(true);
+      })
       .catch((err) => activo && setError(`No se pudieron cargar las visitas: ${err.message}`));
 
     // Evita actualizar el estado si se cerró la ficha antes de que responda
@@ -246,10 +261,20 @@ function VisitasAdopcion({ adopcion, visitasAgendadas = [], onAdopcionRechazada,
     .sort()
     .at(-1);
 
-  // Primer día que se puede elegir: 15 días después de la adopción, desde hoy y después de la última visita
+  // Primer día que se puede elegir: el día siguiente a la adopción, desde hoy y después de la última visita
   const fechaMinima = [fechaMinimaVisita(adopcion), primerDiaDisponible, ultimaVisita ? diaSiguiente(ultimaVisita) : ""]
     .sort()
     .at(-1);
+
+  // Fecha que se pone automáticamente: 15 días después de la adopción.
+  // Si ese día ya no se puede (pasó o es antes de la última visita), se usa el primer día disponible
+  const fechaSugerida = [diasDespuesDeAdopcion(adopcion, DIAS_VISITA_SUGERIDA), fechaMinima].sort().at(-1);
+
+  useEffect(() => {
+    if (!visitasCargadas || fechaSugeridaPuesta.current) return;
+    fechaSugeridaPuesta.current = true;
+    setFecha(fechaSugerida);
+  }, [visitasCargadas, fechaSugerida]);
 
   // Si la visita es hoy, solo se pueden elegir horas posteriores a la actual
   const horaYaPaso = (dia, opcion) => dia === hoy && opcion <= ahora;
@@ -557,9 +582,9 @@ function VisitasAdopcion({ adopcion, visitasAgendadas = [], onAdopcionRechazada,
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Adoptado el {aTextoFecha(fechaDeAdopcion(adopcion)).split("-").reverse().join("-")}. La primera visita es
-        desde {DIAS_MINIMOS_VISITA} días después de la adopción y cada nueva visita debe ser después de la anterior.
-        Próxima fecha disponible: {formatearFechaVisita(fechaMinima)}.
+        Adoptado el {aTextoFecha(fechaDeAdopcion(adopcion)).split("-").reverse().join("-")}. La visita se puede
+        agendar desde el día siguiente a la adopción y cada nueva visita debe ser después de la anterior. Fecha
+        sugerida ({DIAS_VISITA_SUGERIDA} días después de la adopción): {formatearFechaVisita(fechaSugerida)}.
       </p>
 
       {visitaPendiente ? (
@@ -681,6 +706,121 @@ function ProximasVisitas({ visitas, onAbrirSeguimiento }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// Registro clínico del animal de una solicitud, para que el encargado evalúe la adopción.
+// Es solo lectura: los registros los crea y edita el veterinario
+function HistorialClinicoAnimal({ animal, onCerrar }) {
+  const [registros, setRegistros] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let activo = true;
+    animalesApi
+      .historial(animal.id)
+      .then((datos) => activo && setRegistros(datos.registrosClinicos ?? []))
+      .catch((err) => activo && setError(`No se pudo cargar el registro clínico: ${err.message}`));
+    // Si se cierra antes de que llegue la respuesta, no se actualiza el estado
+    return () => {
+      activo = false;
+    };
+  }, [animal.id]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+      onClick={onCerrar}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-historial"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <FotoAnimal animal={animal} />
+            <div>
+              <p className="text-sm font-medium text-slate-500">Registro clínico</p>
+              <h3 id="titulo-historial" className="text-xl font-bold text-slate-900">
+                {animal.nombre || "Sin nombre"}{" "}
+                <span className="text-base font-medium capitalize text-slate-500">({animal.especie?.nombre ?? "?"})</span>
+              </h3>
+              <span
+                className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
+                  ESTILO_ESTADO_ANIMAL[animal.estado] ?? ESTILO_ESTADO_ANIMAL.OTRO
+                }`}
+              >
+                {formatearEnum(animal.estado ?? "OTRO")}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar"
+            className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          >
+            ✕
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-4">
+            <Aviso tipo="error">{error}</Aviso>
+          </div>
+        )}
+
+        {!error && registros === null && (
+          <div className="flex items-center justify-center gap-3 py-10 text-slate-500">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-600" />
+            Cargando...
+          </div>
+        )}
+
+        {registros?.length === 0 && (
+          <p className="mt-6 rounded-2xl bg-slate-50 p-5 text-center text-slate-600">
+            Este animal no tiene antecedentes veterinarios registrados.
+          </p>
+        )}
+
+        {registros?.length > 0 && (
+          <ol className="mt-6 space-y-3">
+            {registros.map((registro) => (
+              <li key={registro.id} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="flex flex-wrap items-center gap-2">
+                  <time className="text-sm font-semibold text-slate-900">
+                    {/* La fecha se guarda a medianoche UTC; sin timeZone se vería el día anterior */}
+                    {new Date(registro.fecha).toLocaleDateString("es-CL", { timeZone: "UTC" })}
+                  </time>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold capitalize text-slate-700 ring-1 ring-inset ring-slate-200">
+                    {formatearEnum(registro.tipo)}
+                  </span>
+                </div>
+
+                <p className="mt-2 whitespace-pre-line break-words text-slate-800">{registro.descripcion}</p>
+
+                {[
+                  ["Diagnóstico", registro.diagnostico],
+                  ["Tratamiento", registro.tratamiento],
+                  ["Observaciones", registro.observaciones],
+                ]
+                  .filter(([, valor]) => valor)
+                  .map(([etiqueta, valor]) => (
+                    <p key={etiqueta} className="mt-1 whitespace-pre-line break-words text-sm text-slate-700">
+                      <span className="font-semibold">{etiqueta}:</span> {valor}
+                    </p>
+                  ))}
+
+                <p className="mt-2 text-xs text-slate-500">👩‍⚕️ {nombreVeterinario(registro.veterinario)}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 }
@@ -832,6 +972,8 @@ function AdopcionesPage({ cuenta }) {
   const [mensaje, setMensaje] = useState("");
   const [fichaAbierta, setFichaAbierta] = useState(null);
   const [seguimientoAbierto, setSeguimientoAbierto] = useState(null);
+  // Animal cuyo registro clínico está abierto (solo lectura, desde la tabla de solicitudes)
+  const [historialAbierto, setHistorialAbierto] = useState(null);
   const [proximasVisitas, setProximasVisitas] = useState([]);
   const [observaciones, setObservaciones] = useState("");
   const [filtro, setFiltro] = useState("TODAS");
@@ -892,6 +1034,29 @@ function AdopcionesPage({ cuenta }) {
 
   const adopcionesFiltradas =
     filtro === "TODAS" ? adopciones : adopciones.filter((adopcion) => adopcion.estado === filtro);
+
+  // La tabla muestra 15 solicitudes y las demás se ven con la barra de desplazamiento.
+  // Se mide dónde empieza la fila 16 porque cada fila puede tener distinta altura
+  const contenedorSolicitudes = useRef(null);
+  const [alturaSolicitudes, setAlturaSolicitudes] = useState(null);
+
+  useLayoutEffect(() => {
+    const medir = () => {
+      const contenedor = contenedorSolicitudes.current;
+      const filas = contenedor?.querySelectorAll("tbody tr");
+      if (!contenedor || !filas || filas.length <= SOLICITUDES_VISIBLES) {
+        setAlturaSolicitudes(null);
+        return;
+      }
+      const inicioContenedor = contenedor.getBoundingClientRect().top - contenedor.scrollTop;
+      setAlturaSolicitudes(filas[SOLICITUDES_VISIBLES].getBoundingClientRect().top - inicioContenedor);
+    };
+
+    medir();
+    // Al cambiar el ancho de la pantalla las filas cambian de altura
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [adopcionesFiltradas.length, filtro, cargando]);
 
   // Tras rechazar la adopción en una visita: se cierra el seguimiento y se recarga la tabla
   // Cuando cambian las visitas en el seguimiento, solo se recarga la tabla de próximas visitas
@@ -1070,9 +1235,20 @@ function AdopcionesPage({ cuenta }) {
                 </p>
               </div>
             ) : (
-              <div className="mt-4 overflow-x-auto">
+              <>
+              {adopcionesFiltradas.length > SOLICITUDES_VISIBLES && (
+                <p className="mt-4 text-xs text-slate-500">
+                  Mostrando {SOLICITUDES_VISIBLES} de {adopcionesFiltradas.length} solicitudes. Desliza dentro de la tabla para ver las demás.
+                </p>
+              )}
+              <div
+                ref={contenedorSolicitudes}
+                className="mt-4 overflow-auto rounded-xl"
+                style={alturaSolicitudes ? { maxHeight: alturaSolicitudes } : undefined}
+              >
                 <table className="min-w-full text-left text-sm">
-                  <thead>
+                  {/* El encabezado queda fijo arriba al deslizar */}
+                  <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(241_245_249)]">
                     <tr className="text-xs uppercase tracking-wider text-slate-500">
                       <th className="px-3 py-3 font-semibold">Animal</th>
                       <th className="px-3 py-3 font-semibold">Adoptante</th>
@@ -1087,8 +1263,22 @@ function AdopcionesPage({ cuenta }) {
                   <tbody className="divide-y divide-slate-100">
                     {adopcionesFiltradas.map((adopcion) => (
                       <tr key={adopcion.id} className="transition hover:bg-sky-50/60">
-                        <td className="px-3 py-3 font-medium text-slate-800">
-                          {nombreAnimal(adopcion.animal)}
+                        <td className="px-3 py-3">
+                          {/* Al presionar el animal se abre su registro clínico y su estado */}
+                          <button
+                            type="button"
+                            onClick={() => setHistorialAbierto(adopcion.animal)}
+                            title="Ver registro clínico y estado del animal"
+                            className="group flex items-center gap-3 rounded-xl p-1 -m-1 text-left transition hover:bg-sky-100/70"
+                          >
+                            <FotoAnimal animal={adopcion.animal} />
+                            <span className="min-w-0">
+                              <span className="block font-medium text-slate-800 group-hover:text-sky-700 group-hover:underline">
+                                {nombreAnimal(adopcion.animal)}
+                              </span>
+                              <span className="block text-xs text-slate-500">🩺 Ver registro clínico</span>
+                            </span>
+                          </button>
                         </td>
                         <td className="px-3 py-3">
                           <p className="font-medium text-slate-800">{adopcion.nombre}</p>
@@ -1136,6 +1326,7 @@ function AdopcionesPage({ cuenta }) {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         )}
@@ -1405,6 +1596,10 @@ function AdopcionesPage({ cuenta }) {
       )}
 
       {/* Seguimiento post adopción: solo para adopciones aprobadas */}
+      {esEncargado && historialAbierto && (
+        <HistorialClinicoAnimal animal={historialAbierto} onCerrar={() => setHistorialAbierto(null)} />
+      )}
+
       {esEncargado && seguimientoAbierto && (
         <div
           className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"

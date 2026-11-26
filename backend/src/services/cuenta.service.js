@@ -364,6 +364,16 @@ export function listarVoluntarios() {
   });
 }
 
+// Veterinarios que trabajan actualmente en el refugio (cuentas de tipo VETERINARIO),
+// para elegir el responsable de un registro clínico. Solo nombre y apellido
+export function listarVeterinarios() {
+  return prisma.cuenta.findMany({
+    where: { tipo: 'VETERINARIO' },
+    select: { id: true, nombre: true, apellido: true },
+    orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
+  });
+}
+
 export function listarTrabajadores() {
   return prisma.cuenta.findMany({
     where: { tipo: { in: TIPOS_TRABAJADOR } },

@@ -7,6 +7,7 @@ import {
   cambiarDisponibilidadCuidado,
   listarVoluntarios,
   listarTrabajadores,
+  listarVeterinarios,
   crearTrabajador,
   actualizarTrabajador,
   crearVoluntario,
@@ -50,6 +51,8 @@ router.patch('/disponibilidad-cuidado', autenticar, cambiarDisponibilidadCuidado
 router.get('/voluntarios/calendario', autenticarVoluntariado, obtenerCalendarioVoluntariado);
 router.put('/voluntarios/:id/disponibilidad', autenticarVoluntariado, actualizarDisponibilidadHoraria);
 router.get('/voluntarios', autenticarVoluntariado, listarVoluntarios);
+// Lista para elegir el veterinario responsable de un registro clínico
+router.get('/veterinarios', autenticar, autorizar('VETERINARIO', 'ADMINISTRADOR'), listarVeterinarios);
 router.get('/trabajadores', autenticar, autorizar('ADMINISTRADOR'), listarTrabajadores);
 router.post('/trabajadores', autenticar, autorizar('ADMINISTRADOR'), crearTrabajador);
 router.patch('/trabajadores/:id', autenticar, autorizar('ADMINISTRADOR'), actualizarTrabajador);

@@ -96,11 +96,40 @@ export function enviarSolicitudRecibida(adopcion) {
   });
 }
 
-// Avisa al adoptante si su solicitud fue aprobada o rechazada.
+// Cargo que se muestra en la firma según el tipo de cuenta que hizo la acción
+const CARGO_FIRMA = {
+  ENCARGADO_ADOPCIONES: 'Encargado(a) de adopciones',
+  ADMINISTRADOR: 'Administración',
+};
+
+// Firma del correo con el encargado que hizo la acción, como la firma de una persona:
+// "Saludos cordiales," / nombre en negrita y oscuro / cargo y refugio en gris más pequeño.
+// encargado es la cuenta que inició sesión ({ nombre, apellido, tipo });
+// sin encargado se firma solo como "Refugio de Animales"
+function firmaEncargado(encargado) {
+  if (!encargado) return { texto: ['Refugio de Animales'], html: '' };
+
+  const nombre = `${encargado.nombre} ${encargado.apellido ?? ''}`.trim();
+  const cargo = CARGO_FIRMA[encargado.tipo] ?? 'Equipo de adopciones';
+
+  return {
+    texto: ['Saludos cordiales,', nombre, `${cargo} · Refugio de Animales`],
+    html: `
+      <p style="margin:24px 0 0; color:#334155;">Saludos cordiales,</p>
+      <p style="margin:12px 0 0; padding-left:12px; border-left:3px solid #0284c7;">
+        <strong style="color:#0f172a; font-size:15px;">${escaparHtml(nombre)}</strong><br>
+        <span style="color:#64748b; font-size:13px;">${cargo} · Refugio de Animales</span>
+      </p>`,
+  };
+}
+
+// Avisa al adoptante si su solicitud fue aprobada o rechazada, y qué encargado lo hizo.
 // adopcion debe venir con { animal } incluido
-export async function enviarResultadoAdopcion(adopcion) {
+export async function enviarResultadoAdopcion(adopcion, encargado) {
   const nombreAnimal = adopcion.animal?.nombre || `el animal #${adopcion.animalId}`;
   const aprobada = adopcion.estado === 'APROBADA';
+
+  const firma = firmaEncargado(encargado);
 
   const asunto = aprobada
     ? `¡Tu solicitud para adoptar a ${nombreAnimal} fue aprobada!`
@@ -137,9 +166,9 @@ export async function enviarResultadoAdopcion(adopcion) {
     from: REMITENTE,
     to: adopcion.email,
     subject: asunto,
-    text: [...lineas, '', 'Gracias por querer darle un hogar a un animal.', 'Refugio de Animales'].join('\n'),
+    text: [...lineas, '', 'Gracias por querer darle un hogar a un animal.', '', ...firma.texto].join('\n'),
     // El logo va al final y ya incluye la firma "Refugio de Animales"
-    html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.</p>${FOTO_CORREO}`,
+    html: `${cuerpoHtml}<p>Gracias por querer darle un hogar a un animal.</p>${firma.html}${FOTO_CORREO}`,
     attachments: [FOTO_REFUGIO],
   });
 }
@@ -147,15 +176,16 @@ export async function enviarResultadoAdopcion(adopcion) {
 // "AAAA-MM-DD..." → "DD-MM-AAAA". Las visitas se guardan a medianoche UTC, así no se desfasa el día
 const formatearDiaVisita = (fecha) => fecha.toISOString().slice(0, 10).split('-').reverse().join('-');
 
-// Avisa al adoptante que se agendó o se canceló una visita de seguimiento.
+// Avisa al adoptante que se agendó o se canceló una visita de seguimiento, y qué encargado lo hizo.
 // adopcion debe venir con { nombre, email, animal }
-export function enviarAvisoVisita(adopcion, visita) {
+export function enviarAvisoVisita(adopcion, visita, encargado) {
   const nombreAnimal = adopcion.animal?.nombre || 'tu mascota';
   // Las visitas antiguas no tienen hora
   const fecha = visita.hora
     ? `${formatearDiaVisita(visita.fecha)} a las ${visita.hora}`
     : formatearDiaVisita(visita.fecha);
   const cancelada = visita.estado === 'CANCELADA';
+  const firma = firmaEncargado(encargado);
 
   const asunto = cancelada
     ? `Visita de seguimiento del ${fecha} cancelada`
@@ -176,12 +206,14 @@ export function enviarAvisoVisita(adopcion, visita) {
     ? `
       <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, te informamos que la visita de seguimiento de <strong>${escaparHtml(nombreAnimal)}</strong> agendada para el <strong>${fecha}</strong> fue <strong>cancelada</strong>.</p>
       <p>Si corresponde, te avisaremos cuando agendemos una nueva fecha.</p>
+      ${firma.html}
       ${FOTO_CORREO}
     `
     : `
       <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, agendamos una visita de seguimiento para ver cómo está <strong>${escaparHtml(nombreAnimal)}</strong> en su nuevo hogar.</p>
       <p><strong>Fecha y hora de la visita:</strong> ${fecha}</p>
       <p>Si no puedes recibirnos ese día, responde este correo para coordinar otra fecha.</p>
+      ${firma.html}
       ${FOTO_CORREO}
     `;
 
@@ -189,7 +221,7 @@ export function enviarAvisoVisita(adopcion, visita) {
     from: REMITENTE,
     to: adopcion.email,
     subject: asunto,
-    text: [...texto, '', 'Refugio de Animales'].join('\n'),
+    text: [...texto, '', ...firma.texto].join('\n'),
     html,
     attachments: [FOTO_REFUGIO],
   });
@@ -197,9 +229,10 @@ export function enviarAvisoVisita(adopcion, visita) {
 
 // Avisa al adoptante que, después de la visita de seguimiento, la adopción fue rechazada
 // y el animal vuelve al refugio. adopcion debe venir con { nombre, email, animal, observaciones }
-export function enviarAdopcionRechazadaTrasVisita(adopcion, visita) {
+export function enviarAdopcionRechazadaTrasVisita(adopcion, visita, encargado) {
   const nombreAnimal = adopcion.animal?.nombre || 'el animal';
   const fecha = formatearDiaVisita(visita.fecha);
+  const firma = firmaEncargado(encargado);
 
   return transporter.sendMail({
     from: REMITENTE,
@@ -214,7 +247,7 @@ export function enviarAdopcionRechazadaTrasVisita(adopcion, visita) {
       '',
       'Nos pondremos en contacto contigo para coordinar el retiro.',
       '',
-      'Refugio de Animales',
+      ...firma.texto,
     ].join('\n'),
     html: `
       <p>Hola <strong>${escaparHtml(adopcion.nombre)}</strong>, después de la visita de seguimiento del <strong>${fecha}</strong> revisamos las condiciones en que se encuentra <strong>${escaparHtml(nombreAnimal)}</strong>.</p>
@@ -222,6 +255,7 @@ export function enviarAdopcionRechazadaTrasVisita(adopcion, visita) {
       <h3>Motivo</h3>
       <p>${escaparHtml(adopcion.observaciones).replace(/\n/g, '<br>')}</p>
       <p>Nos pondremos en contacto contigo para coordinar el retiro.</p>
+      ${firma.html}
       ${FOTO_CORREO}
     `,
     attachments: [FOTO_REFUGIO],

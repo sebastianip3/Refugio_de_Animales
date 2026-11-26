@@ -28,12 +28,65 @@ const TIPOS_TRABAJADOR = [
   { valor: "VETERINARIO", nombre: "Veterinario" },
 ];
 
+const DIAS_SEMANA = [
+  { id: "lunes", nombre: "Lunes", abreviatura: "Lun" },
+  { id: "martes", nombre: "Martes", abreviatura: "Mar" },
+  { id: "miercoles", nombre: "Miércoles", abreviatura: "Mié" },
+  { id: "jueves", nombre: "Jueves", abreviatura: "Jue" },
+  { id: "viernes", nombre: "Viernes", abreviatura: "Vie" },
+  { id: "sabado", nombre: "Sábado", abreviatura: "Sáb" },
+  { id: "domingo", nombre: "Domingo", abreviatura: "Dom" },
+];
+
+function crearHorarioVacio() {
+  return Object.fromEntries(
+    DIAS_SEMANA.map(({ id }) => [id, { inicio: "", fin: "" }]),
+  );
+}
+
+function leerHorario(horario) {
+  const horarios = crearHorarioVacio();
+  if (!horario) return { horarios, legible: true };
+
+  const entradas = horario.split(";").map((entrada) => entrada.trim());
+  const diasEncontrados = new Set();
+  const expresion = /^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom) ((?:[01]\d|2[0-3]):00)-((?:[01]\d|2[0-3]):00)$/u;
+
+  for (const entrada of entradas) {
+    const coincidencia = entrada.match(expresion);
+    if (!coincidencia) return { horarios: crearHorarioVacio(), legible: false };
+
+    const dia = DIAS_SEMANA.find(({ abreviatura }) => abreviatura === coincidencia[1]);
+    if (!dia || diasEncontrados.has(dia.id)) {
+      return { horarios: crearHorarioVacio(), legible: false };
+    }
+
+    horarios[dia.id] = { inicio: coincidencia[2], fin: coincidencia[3] };
+    diasEncontrados.add(dia.id);
+  }
+
+  return { horarios, legible: true };
+}
+
+function serializarHorario(horarios) {
+  return DIAS_SEMANA
+    .filter(({ id }) => horarios[id].inicio && horarios[id].fin)
+    .map(({ id, abreviatura }) => {
+      const { inicio, fin } = horarios[id];
+      return `${abreviatura} ${inicio}-${fin}`;
+    })
+    .join("; ");
+}
+
+function esHoraEnPunto(hora) {
+  return /^(?:[01]\d|2[0-3]):00$/.test(hora);
+}
+
 const FORMULARIO_INICIAL = {
   nombre: "",
   apellido: "",
   correo: "",
   tipo: "TRABAJADOR",
-  horario: "",
 };
 
 function TrabajadoresPage({ cuenta }) {
@@ -45,6 +98,8 @@ function TrabajadoresPage({ cuenta }) {
   const [trabajadorEditado, setTrabajadorEditado] = useState(null);
   const [modoFormulario, setModoFormulario] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_INICIAL);
+  const [horarioDias, setHorarioDias] = useState(crearHorarioVacio);
+  const [horarioLegado, setHorarioLegado] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -76,8 +131,10 @@ function TrabajadoresPage({ cuenta }) {
       apellido: trabajador.apellido,
       correo: trabajador.correo,
       tipo: trabajador.tipo,
-      horario: trabajador.horario || "",
     });
+    const horarioActual = leerHorario(trabajador.horario || "");
+    setHorarioDias(horarioActual.horarios);
+    setHorarioLegado(horarioActual.legible ? "" : trabajador.horario || "");
     setContrasena("");
     setError("");
     setMensaje("");
@@ -87,6 +144,8 @@ function TrabajadoresPage({ cuenta }) {
     setTrabajadorEditado(null);
     setModoFormulario("crear");
     setFormulario(FORMULARIO_INICIAL);
+    setHorarioDias(crearHorarioVacio());
+    setHorarioLegado("");
     setContrasena("");
     setError("");
     setMensaje("");
@@ -96,12 +155,37 @@ function TrabajadoresPage({ cuenta }) {
     evento.preventDefault();
     if (!esAdministrador || guardando || !modoFormulario) return;
 
+    const rangoInvalido = DIAS_SEMANA.find(({ id, nombre }) => {
+      const { inicio, fin } = horarioDias[id];
+      if ((inicio && !esHoraEnPunto(inicio)) || (fin && !esHoraEnPunto(fin))) {
+        return { nombre, mensaje: "usa horas en punto, entre 00:00 y 23:00" };
+      }
+      if (Boolean(inicio) !== Boolean(fin)) {
+        return { nombre, mensaje: "completa tanto la hora de inicio como la de fin" };
+      }
+      if (inicio && fin && inicio >= fin) {
+        return { nombre, mensaje: "la hora de fin debe ser posterior a la de inicio" };
+      }
+      return false;
+    });
+
+    if (rangoInvalido) {
+      setError(`Horario de ${rangoInvalido.nombre}: ${rangoInvalido.mensaje}.`);
+      return;
+    }
+
     setGuardando(true);
     setError("");
     setMensaje("");
+    const horarioNuevo = serializarHorario(horarioDias);
+    const datosTrabajador = {
+      ...formulario,
+      horario: horarioNuevo || horarioLegado || "",
+    };
+
     try {
       if (modoFormulario === "crear") {
-        const creado = await cuentasApi.crearTrabajador({ ...formulario, contrasena });
+        const creado = await cuentasApi.crearTrabajador({ ...datosTrabajador, contrasena });
         setTrabajadores((actuales) =>
           [...actuales, creado].sort(
             (a, b) => a.apellido.localeCompare(b.apellido) || a.nombre.localeCompare(b.nombre),
@@ -109,7 +193,7 @@ function TrabajadoresPage({ cuenta }) {
         );
         setMensaje("El trabajador se agregó correctamente.");
       } else {
-        const actualizado = await cuentasApi.actualizarTrabajador(trabajadorEditado.id, formulario);
+        const actualizado = await cuentasApi.actualizarTrabajador(trabajadorEditado.id, datosTrabajador);
         setTrabajadores((actuales) =>
           actuales
             .map((trabajador) => (trabajador.id === actualizado.id ? actualizado : trabajador))
@@ -273,15 +357,79 @@ function TrabajadoresPage({ cuenta }) {
                 <MenuItem key={tipo.valor} value={tipo.valor}>{tipo.nombre}</MenuItem>
               ))}
             </TextField>
-            <TextField
-              label="Horario de trabajo"
-              value={formulario.horario}
-              onChange={(evento) => setFormulario({ ...formulario, horario: evento.target.value })}
-              multiline
-              minRows={2}
-              inputProps={{ maxLength: 255 }}
-              placeholder="Ej.: Lunes a viernes, 09:00 a 17:00"
-            />
+            {horarioLegado && !serializarHorario(horarioDias) && (
+              <Alert
+                severity="info"
+                action={
+                  <Button
+                    type="button"
+                    color="inherit"
+                    size="small"
+                    onClick={() => setHorarioLegado("")}
+                  >
+                    Quitar
+                  </Button>
+                }
+              >
+                El horario anterior ({horarioLegado}) se conservará hasta que definas uno nuevo o lo quites.
+              </Alert>
+            )}
+            <Box sx={{ display: "grid", gap: 1 }}>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Horario semanal
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Elige la hora de inicio y fin para cada día. Solo se permiten horas en punto, de 00:00 a 23:00.
+                </Typography>
+              </Box>
+              {DIAS_SEMANA.map(({ id, nombre }) => (
+                <Box
+                  key={id}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr 1fr", sm: "minmax(100px, 1fr) 1fr 1fr" },
+                    alignItems: "center",
+                    gap: 1.5,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    py: 1,
+                  }}
+                >
+                  <Typography sx={{ gridColumn: { xs: "1 / -1", sm: "auto" }, fontWeight: 500 }}>
+                    {nombre}
+                  </Typography>
+                  <TextField
+                    label="Desde"
+                    type="time"
+                    value={horarioDias[id].inicio}
+                    onChange={(evento) =>
+                      setHorarioDias((actual) => ({
+                        ...actual,
+                        [id]: { ...actual[id], inicio: evento.target.value },
+                      }))
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 3600, min: "00:00", max: "23:00" }}
+                    size="small"
+                  />
+                  <TextField
+                    label="Hasta"
+                    type="time"
+                    value={horarioDias[id].fin}
+                    onChange={(evento) =>
+                      setHorarioDias((actual) => ({
+                        ...actual,
+                        [id]: { ...actual[id], fin: evento.target.value },
+                      }))
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 3600, min: "00:00", max: "23:00" }}
+                    size="small"
+                  />
+                </Box>
+              ))}
+            </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button

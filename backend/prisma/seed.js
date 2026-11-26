@@ -65,20 +65,17 @@ const animalesDemo = [
         descripcion: 'Evaluación de ingreso',
         diagnostico: 'Buen estado general, leve deshidratación',
         tratamiento: 'Hidratación oral',
-        veterinario: 'KAREN_BECKER',
       },
       {
         fecha: new Date('2026-06-10'),
         tipo: 'VACUNA',
         descripcion: 'Vacuna óctuple',
-        veterinario: 'KAREN_BECKER',
       },
       {
         fecha: new Date('2026-07-01'),
         tipo: 'ESTERILIZACION',
         descripcion: 'Ovariohisterectomía sin complicaciones',
         tratamiento: 'Analgésico por 5 días',
-        veterinario: 'JAMES_HERRIOT',
       },
     ],
   },
@@ -94,14 +91,12 @@ const animalesDemo = [
         fecha: new Date('2026-08-15'),
         tipo: 'DESPARASITACION',
         descripcion: 'Desparasitación interna y externa',
-        veterinario: 'JAMES_HERRIOT',
       },
       {
         fecha: new Date('2026-08-20'),
         tipo: 'EXAMEN',
         descripcion: 'Test de leucemia e inmunodeficiencia felina',
         diagnostico: 'Negativo',
-        veterinario: 'JAMES_HERRIOT',
       },
     ],
   },
@@ -145,12 +140,23 @@ async function main() {
   // Solo se cargan una vez, para no duplicar animales al volver a ejecutar el seed
   if ((await prisma.registroClinico.count()) > 0) return;
 
+  // Los registros de ejemplo quedan a cargo de la cuenta de veterinario del seed, si existe
+  const veterinario = await prisma.cuenta.findUnique({
+    where: { correo: 'veterinario@refugio.cl' },
+    select: { id: true },
+  });
+
   for (const { especie, registrosClinicos, ...animal } of animalesDemo) {
     await prisma.animal.create({
       data: {
         ...animal,
         especie: { connect: { nombre: especie } },
-        registrosClinicos: { create: registrosClinicos },
+        registrosClinicos: {
+          create: registrosClinicos.map((registro) => ({
+            ...registro,
+            veterinarioId: veterinario?.id ?? null,
+          })),
+        },
       },
     });
   }
