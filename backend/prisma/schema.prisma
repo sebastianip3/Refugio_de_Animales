@@ -17,9 +17,12 @@ enum EstadoAnimal {
   EN_EVALUACION
   CUARENTENA
   EN_TRATAMIENTO
+  ADOPTABLE
   EN_ADOPCION
   ADOPTADO
-  OTRO
+  NO_ADOPTABLE
+  FALLECIDO
+  EXTRAVIADO
 }
 
 enum TipoRegistroClinico {
@@ -208,6 +211,7 @@ model Animal {
   nombre          String?      @db.VarChar(30)
   cambioNombre    Int          @default(0)
   fechaNacimiento DateTime?
+  cambioFechaNacimiento   Int    @default(0)
   sexo            Sexo         @default(DESCONOCIDO)
   cambioSexo      Int          @default(0)
   peso            Float?
