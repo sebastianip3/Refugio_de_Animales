@@ -2,9 +2,14 @@ import prisma from '../config/prisma.js';
 import { AppError } from '../utils/app-error.js';
 
 const ESTADOS_INICIALES = ['EN_EVALUACION', 'CUARENTENA', 'EN_TRATAMIENTO'];
+const ESTADOS_MANUALES = ['EN_EVALUACION', 'CUARENTENA', 'EN_TRATAMIENTO', 'ADOPTABLE', 'NO_ADOPTABLE', 'FALLECIDO', 'EXTRAVIADO'];
+const ESTADOS_BLOQUEADOS = ['ADOPTADO', 'FALLECIDO', 'EXTRAVIADO'];
+const ESTADOS_EGRESO = ['FALLECIDO', 'EXTRAVIADO'];
+
 const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
 const PESO_MAXIMO = { Perro: 200, Gato: 25 };
 const MAX_CAMBIOS = 2;
+const MAX_CAMBIOS_FECHA = 1;
 
 // la fecha de nacimiento no puede ser futura ni superar la edad máxima de su especie
 async function validarFechaNacimiento(especieId, fechaNacimiento) {
@@ -69,8 +74,22 @@ export async function crearAnimal(data) {
 export async function actualizarAnimal(id, data) {
   const actual = await obtenerAnimal(id);
 
+  if (ESTADOS_BLOQUEADOS.includes(actual.estado)) {
+    throw new AppError(409, 'Un animal adoptado, fallecido o extraviado no se puede editar');
+  }
+
   if(data.especieId && data.especieId !== actual.especieId){
     throw new AppError(409, 'No se puede cambiar la especie de un animal ya registrado');
+  }
+
+  // el encargado de adopcion tiene permitido cambiar esatdo en_adopcion y adoptado
+  if(data.estado && data.estado !== actual.estado) {
+    if (actual.estado === 'EN_ADOPCION' && !ESTADOS_EGRESO.includes(data.estado)) {
+      throw new AppError(409, 'El animal tiene una solicitud de adopción en curso; primero apruébela o recházela');
+    }
+    if (!ESTADOS_MANUALES.includes(data.estado)) {
+      throw new AppError(409, 'Ese estado lo asigna el proceso de adopción');
+    }
   }
 
   const especieId = data.especieId ?? actual.especieId;
@@ -80,7 +99,6 @@ export async function actualizarAnimal(id, data) {
     if (data.sexo === 'DESCONOCIDO') {
       throw new AppError(409, 'Un animal con sexo ya definido no puede volver a desconocido');
     }
-
     // solo cuenta si ya tenía sexo definido 
     if (actual.sexo !== 'DESCONOCIDO') {
       if (actual.cambioSexo >= MAX_CAMBIOS) {
@@ -113,6 +131,18 @@ export async function actualizarAnimal(id, data) {
       data.cambioChip = actual.cambioChip + 1;
     }
   }
+ // al volver a editar una fecha de nacimiento solo tiene 1 intento
+  if (data.fechaNacimiento !== undefined && actual.fechaNacimiento) {
+    if (!data.fechaNacimiento) {
+      throw new AppError(409, 'Un animal con fecha de nacimiento no puede quedar sin ella');
+    }
+    if (data.fechaNacimiento.getTime() !== actual.fechaNacimiento.getTime()) {
+      if (actual.cambioFechaNacimiento >= MAX_CAMBIOS_FECHA) {
+        throw new AppError(409, 'La fecha de nacimiento ya se corrigió y no se puede volver a cambiar');
+      }
+      data.cambioFechaNacimiento = actual.cambioFechaNacimiento + 1;
+    }
+  }
 
   const fechaNacimiento = data.fechaNacimiento !== undefined ? data.fechaNacimiento : actual.fechaNacimiento;
   await validarFechaNacimiento(especieId, fechaNacimiento);
@@ -122,11 +152,52 @@ export async function actualizarAnimal(id, data) {
 
   if (data.tieneChip === false) data.numeroChip = null;
 
+  // fallecido o extraviado sale del refugio y se libera todo lo que tenía pendiente
+  if (ESTADOS_EGRESO.includes(data.estado) && data.estado !== actual.estado) {
+    const ahora = new Date();
+    data.fechaEgreso = ahora;
+    data.motivoEgreso = data.estado === 'FALLECIDO' ? 'Fallecido' : 'Extraviado';
+
+    const [, , , animal] = await prisma.$transaction([
+      // las solicitudes en curso se rechazan
+      prisma.adopcion.updateMany({
+        where: { animalId: id, estado: { in: ['PENDIENTE', 'EN_REVISION'] } },
+        data: { estado: 'RECHAZADA', observaciones: `El animal fue registrado como ${data.motivoEgreso.toLowerCase()}` },
+      }),
+      // los cuidados futuros se borran y los que están en curso terminan hoy
+      prisma.cuidadoAnimal.deleteMany({ where: { animalId: id, fechaInicio: { gt: ahora } } }),
+      prisma.cuidadoAnimal.updateMany({
+        where: { animalId: id, fechaInicio: { lte: ahora }, fechaFin: { gt: ahora } },
+        data: { fechaFin: ahora },
+      }),
+      prisma.animal.update({ where: { id }, data, include: { especie: true } }),
+    ]);
+    return animal;
+  }
+
   return prisma.animal.update({ where: { id }, data, include: { especie: true } });
+}
+
+// un animal extraviado que aparece vuelve al refugio y pasa por evaluación
+export async function marcarEncontrado(id) {
+  const actual = await obtenerAnimal(id);
+  if (actual.estado !== 'EXTRAVIADO') {
+    throw new AppError(409, 'Solo un animal extraviado puede marcarse como encontrado');
+  }
+
+  return prisma.animal.update({
+    where: { id },
+    data: { estado: 'EN_EVALUACION', fechaEgreso: null, motivoEgreso: null },
+    include: { especie: true },
+  });
 }
 
 export async function eliminarAnimal(id){
   await obtenerAnimal(id);
+
+  if (ESTADOS_EGRESO.includes(actual.estado)) {
+    throw new AppError(409, 'Un animal fallecido o extraviado queda como registro y no se puede eliminar')
+  }
 
   const [adopciones, registros, cuidados] = await Promise.all([
     prisma.adopcion.count({where: {animalId: id}}),
