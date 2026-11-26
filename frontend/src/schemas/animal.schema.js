@@ -1,12 +1,18 @@
 import { z } from "zod";
 
 export const SEXOS = ["DESCONOCIDO", "MACHO", "HEMBRA"];
-export const ESTADOS = ["EN_EVALUACION", "CUARENTENA", "EN_TRATAMIENTO", "EN_ADOPCION", "ADOPTADO", "OTRO"];
+export const ESTADOS = [
+  "EN_EVALUACION", "CUARENTENA", "EN_TRATAMIENTO", "ADOPTABLE",
+  "EN_ADOPCION", "ADOPTADO", "NO_ADOPTABLE", "FALLECIDO", "EXTRAVIADO",
+];
 export const ESTADOS_INICIALES = ["EN_EVALUACION", "CUARENTENA", "EN_TRATAMIENTO"];
+export const ESTADOS_MANUALES = ["EN_EVALUACION", "CUARENTENA", "EN_TRATAMIENTO", "ADOPTABLE", "NO_ADOPTABLE", "FALLECIDO", "EXTRAVIADO"];
+export const ESTADOS_BLOQUEADOS = ["ADOPTADO", "FALLECIDO", "EXTRAVIADO"];
 
 export const EDAD_MAXIMA = { Perro: 60, Gato: 50 };
 export const PESO_MAXIMO = { Perro: 200, Gato: 25 };
 export const MAX_CAMBIOS = 2;
+export const MAX_CAMBIOS_FECHA = 1;
 
 const SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+([ '-][A-Za-zÁÉÍÓÚáéíóúÑñÜü]+)*$/;
 
