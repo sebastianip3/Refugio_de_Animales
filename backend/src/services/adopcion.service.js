@@ -51,7 +51,8 @@ export async function crearAdopcion(data) {
   const adopcion = await prisma.$transaction(async (tx) => {
     const animal = await tx.animal.findUnique({ where: { id: data.animalId } });
     if (!animal) throw new AppError(404, 'Animal no encontrado');
-    if (animal.estado === 'ADOPTADO') throw new AppError(409, 'El animal ya fue adoptado');
+    // Solo se puede postular a un animal ADOPTABLE (ciclo: ADOPTABLE → EN_ADOPCION → ADOPTADO)
+    if (animal.estado !== 'ADOPTABLE') throw new AppError(409, 'El animal no está disponible para adopción');
 
     const enProceso = await tx.adopcion.findFirst({
       where: { animalId: data.animalId, estado: { in: ESTADOS_EN_PROCESO } },
@@ -70,6 +71,9 @@ export async function crearAdopcion(data) {
           : 'Este adoptante ya tiene una solicitud de adopción en proceso'
       );
     }
+
+    // mientras se revisa la solicitud, nadie más puede postular a este animal
+    await tx.animal.update({ where: { id: data.animalId }, data: { estado: 'EN_ADOPCION' } });
 
     return tx.adopcion.create({ data, include: INCLUDE_ANIMAL });
   }, TX_OPCIONES);
@@ -138,6 +142,10 @@ export async function actualizarAdopcion(id, data, encargado) {
           where: { id: actual.animalId },
           data: { estado: 'ADOPTADO', fechaEgreso: new Date(), motivoEgreso: 'Adoptado' },
         });
+      }
+      // rechazada: el animal vuelve a estar disponible
+      if (data.estado === 'RECHAZADA') {
+        await tx.animal.update({ where: { id: actual.animalId }, data: { estado: 'ADOPTABLE' } });
       }
     }
 
@@ -355,7 +363,7 @@ export async function rechazarAdopcionTrasVisita(adopcionId, visitaId, encargado
     // El animal vuelve al refugio y queda disponible para una nueva adopción
     await tx.animal.update({
       where: { id: visita.adopcion.animalId },
-      data: { estado: 'EN_ADOPCION', fechaEgreso: null, motivoEgreso: null },
+      data: { estado: 'ADOPTABLE', fechaEgreso: null, motivoEgreso: null },
     });
 
     // Las visitas que quedaban agendadas ya no se harán
