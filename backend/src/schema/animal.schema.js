@@ -5,9 +5,12 @@ export const ESTADOS_ANIMAL = [
   'EN_EVALUACION',
   'CUARENTENA',
   'EN_TRATAMIENTO',
+  'ADOPTABLE',
   'EN_ADOPCION',
   'ADOPTADO',
-  'OTRO',
+  'NO_ADOPTABLE',
+  'FALLECIDO',
+  'EXTRAVIADO',
 ];
 export const SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+([ '-][A-Za-zÁÉÍÓÚáéíóúÑñÜü]+)*$/;
 
