@@ -159,7 +159,7 @@ describe('Adopciones: evaluar solicitud', () => {
     expect(respuesta.body.errors[0].mensaje).toBe('Debe indicar el motivo del rechazo');
   });
 
-  // Test 11: Firma del correo de aprobación con el encargado que inició sesión
+  // Test 11: Registro y firma del encargado que aprobó la solicitud
   it('al aprobar, el correo se firma con el encargado que inició sesión', async () => {
     prisma.adopcion.findUnique.mockResolvedValue({ id: 3, estado: 'PENDIENTE', animalId: 1 });
     prisma.adopcion.update.mockResolvedValue({ id: 3, estado: 'APROBADA', animalId: 1 });
@@ -171,6 +171,8 @@ describe('Adopciones: evaluar solicitud', () => {
 
     // Comprueba que la API responde 200 (petición correcta)
     expect(respuesta.status).toBe(200);
+    // Comprueba que se guardó el id del encargado que inició sesión como quien aprobó
+    expect(prisma.adopcion.update.mock.calls[0][0].data.evaluadaPorId).toBe(ENCARGADO.id);
     // Comprueba que se envió el correo con los datos esperados (correo.enviarResultadoAdopcion)
     expect(correo.enviarResultadoAdopcion).toHaveBeenCalledWith(
       expect.objectContaining({ estado: 'APROBADA' }),

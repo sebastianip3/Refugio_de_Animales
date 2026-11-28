@@ -159,6 +159,12 @@ describe('Evaluar solicitud (aprobar o rechazar)', () => {
       where: { id: 1 },
       data: expect.objectContaining({ estado: 'ADOPTADO', motivoEgreso: 'Adoptado' }),
     });
+    // Comprueba que se guardó qué encargado aprobó la adopción y cuándo
+    expect(prisma.adopcion.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { estado: 'APROBADA', evaluadaPorId: ENCARGADO.id, fechaEvaluacion: expect.any(Date) },
+      include: { animal: true },
+    });
     // Comprueba que se envió el correo con los datos esperados (correo.enviarResultadoAdopcion)
     expect(correo.enviarResultadoAdopcion).toHaveBeenCalledWith(expect.objectContaining({ estado: 'APROBADA' }), ENCARGADO);
     // Comprueba que el resultado indica que el correo se envió
@@ -185,6 +191,8 @@ describe('Evaluar solicitud (aprobar o rechazar)', () => {
 
     await actualizarAdopcion(3, { estado: 'EN_REVISION' }, ENCARGADO);
 
+    // Comprueba que se guardó qué encargado pasó la solicitud a revisión
+    expect(prisma.adopcion.update.mock.calls[0][0].data.evaluadaPorId).toBe(ENCARGADO.id);
     // Comprueba que no se modificó la base de datos (prisma.animal.update)
     expect(prisma.animal.update).not.toHaveBeenCalled();
     // Comprueba que no se envió el correo (correo.enviarResultadoAdopcion)
@@ -271,6 +279,10 @@ describe('Agendar visita de seguimiento', () => {
     // Comprueba que la visita quedó agendada y que el correo se envió
     expect(visita.id).toBe(40);
     expect(visita.correoEnviado).toBe(true);
+    // Comprueba que se guardó qué encargado agendó la visita
+    expect(prisma.visitaAdopcion.create).toHaveBeenCalledWith({
+      data: { fecha: dia(2026, 11, 21), hora: '10:00', adopcionId: 3, agendadaPorId: ENCARGADO.id },
+    });
     // El correo de la visita lleva al encargado que la agendó (para la firma)
     expect(correo.enviarAvisoVisita).toHaveBeenCalledWith(adopcionAprobada, expect.objectContaining({ id: 40 }), ENCARGADO);
   });
@@ -341,6 +353,11 @@ describe('Cancelar visita', () => {
 
     // Comprueba que la visita quedó CANCELADA
     expect(cancelada.estado).toBe('CANCELADA');
+    // Comprueba que se guardó qué encargado canceló la visita
+    expect(prisma.visitaAdopcion.update).toHaveBeenCalledWith({
+      where: { id: 40 },
+      data: { estado: 'CANCELADA', canceladaPorId: ENCARGADO.id },
+    });
     // Comprueba que se envió el correo con los datos esperados (correo.enviarAvisoVisita)
     expect(correo.enviarAvisoVisita).toHaveBeenCalledWith(adopcion, expect.objectContaining({ estado: 'CANCELADA' }), ENCARGADO);
   });
@@ -366,12 +383,12 @@ describe('Resultado de la visita y rechazo posterior', () => {
     prisma.visitaAdopcion.findFirst.mockResolvedValue({ id: 40, estado: 'AGENDADA', fecha: dia(2026, 12, 3), hora: '10:00' });
     prisma.visitaAdopcion.update.mockResolvedValue({ id: 40, estado: 'REALIZADA' });
 
-    await registrarResultadoVisita(3, 40, { estadoAnimal: 'BIEN', observaciones: 'Todo bien' });
+    await registrarResultadoVisita(3, 40, { estadoAnimal: 'BIEN', observaciones: 'Todo bien' }, ENCARGADO);
 
-    // Comprueba que se guardaron los datos esperados en la base de datos (prisma.visitaAdopcion.update)
+    // Comprueba que se guardó el resultado y qué encargado lo registró
     expect(prisma.visitaAdopcion.update).toHaveBeenCalledWith({
       where: { id: 40 },
-      data: { estadoAnimal: 'BIEN', observaciones: 'Todo bien', estado: 'REALIZADA' },
+      data: { estadoAnimal: 'BIEN', observaciones: 'Todo bien', estado: 'REALIZADA', registradaPorId: ENCARGADO.id },
     });
   });
 
@@ -396,10 +413,15 @@ describe('Resultado de la visita y rechazo posterior', () => {
 
     const resultado = await rechazarAdopcionTrasVisita(3, 40, ENCARGADO);
 
-    // Comprueba que se guardaron los datos esperados en la base de datos (prisma.adopcion.update)
+    // Comprueba que la adopción quedó rechazada con el motivo y qué encargado la rechazó
     expect(prisma.adopcion.update).toHaveBeenCalledWith({
       where: { id: 3 },
-      data: { estado: 'RECHAZADA', observaciones: 'Adopción rechazada tras la visita del 03-12-2026: El hogar no tiene espacio' },
+      data: {
+        estado: 'RECHAZADA',
+        observaciones: 'Adopción rechazada tras la visita del 03-12-2026: El hogar no tiene espacio',
+        evaluadaPorId: ENCARGADO.id,
+        fechaEvaluacion: expect.any(Date),
+      },
     });
     // Comprueba que se guardaron los datos esperados en la base de datos (prisma.animal.update)
     expect(prisma.animal.update).toHaveBeenCalledWith({
@@ -409,7 +431,7 @@ describe('Resultado de la visita y rechazo posterior', () => {
     // Comprueba que se guardaron los datos esperados en la base de datos (prisma.visitaAdopcion.updateMany)
     expect(prisma.visitaAdopcion.updateMany).toHaveBeenCalledWith({
       where: { adopcionId: 3, estado: 'AGENDADA' },
-      data: { estado: 'CANCELADA' },
+      data: { estado: 'CANCELADA', canceladaPorId: ENCARGADO.id },
     });
     // Comprueba que se envió el correo con los datos esperados (correo.enviarAdopcionRechazadaTrasVisita)
     expect(correo.enviarAdopcionRechazadaTrasVisita).toHaveBeenCalledWith(
@@ -419,5 +441,43 @@ describe('Resultado de la visita y rechazo posterior', () => {
     );
     // Comprueba que el resultado indica que el correo se envió
     expect(resultado).toEqual({ adopcionId: 3, correoEnviado: true });
+  });
+});
+
+describe('Registro del encargado que hizo cada acción', () => {
+  // Test 28: Sin cambio de estado no se registra quién evaluó
+  it('editar solo las observaciones no cambia quién evaluó la solicitud', async () => {
+    prisma.adopcion.findUnique.mockResolvedValue({ id: 3, estado: 'EN_REVISION', animalId: 1 });
+    prisma.adopcion.update.mockResolvedValue({ id: 3, estado: 'EN_REVISION' });
+
+    await actualizarAdopcion(3, { observaciones: 'Nota de seguimiento' }, ENCARGADO);
+
+    // Comprueba que solo se guardan las observaciones, sin encargado ni fecha de evaluación
+    expect(prisma.adopcion.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { observaciones: 'Nota de seguimiento' },
+      include: { animal: true },
+    });
+  });
+
+  // Test 29: Sin sesión el encargado queda vacío en lugar de fallar
+  it('si no hay encargado, la visita se agenda igual con el encargado vacío', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 20, 9, 0));
+    prisma.adopcion.findUnique.mockResolvedValue({
+      nombre: 'Ana Soto',
+      email: 'ana@correo.cl',
+      estado: 'APROBADA',
+      updatedAt: new Date(2026, 10, 20, 8, 0),
+      animal: { nombre: 'Michi', fechaEgreso: new Date(2026, 10, 20, 8, 0) },
+    });
+    prisma.visitaAdopcion.findFirst.mockResolvedValue(null);
+    prisma.visitaAdopcion.create.mockResolvedValue({ id: 41, estado: 'AGENDADA' });
+
+    await agendarVisita(3, { fecha: dia(2026, 11, 21), hora: '10:00' });
+
+    // Comprueba que la visita se guarda con el encargado en null
+    expect(prisma.visitaAdopcion.create.mock.calls[0][0].data.agendadaPorId).toBeNull();
+    vi.useRealTimers();
   });
 });
