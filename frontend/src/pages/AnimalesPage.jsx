@@ -7,6 +7,7 @@ import {
   EDAD_MAXIMA, PESO_MAXIMO, MAX_CAMBIOS, MAX_CAMBIOS_FECHA, fechaMinimaNacimiento,
 } from "../schemas/animal.schema.js";
 import { estilosUI } from "../components/EstilosUI.jsx";
+import { puedeRegistrarAnimales, puedeEditarAnimales, puedeEliminarAnimales } from "../utils.js";
 
 const FORMULARIO_VACIO = {
   nombre: "",
@@ -20,6 +21,7 @@ const FORMULARIO_VACIO = {
   fotografiaUrl: "",
   estadoGeneral: "",
   observaciones: "",
+  motivoEgreso: "",
 };
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
@@ -42,6 +44,7 @@ function aFormulario(animal) {
     fotografiaUrl: animal.fotografiaUrl ?? "",
     estadoGeneral: animal.estadoGeneral ?? "",
     observaciones: animal.observaciones ?? "",
+    motivoEgreso: animal.motivoEgreso ?? "",
   };
 }
 
@@ -82,10 +85,26 @@ function AvisoIntentos({ definido, usados, campo, maximo = MAX_CAMBIOS }) {
   if (!definido) texto = `Definir ${campo} por primera vez no gasta intentos`;
   else if (quedan <= 0) texto = `Ya se cambió ${maximo} ${maximo === 1 ? "vez" : "veces"}, no se puede modificar`;
 
-  return <p className="mt-1 text-xs text-slate-500">{texto}</p>;
+  return <p className="mt-1 text-xs text-slate-500">{texto}</p>; 
 }
 
-function AnimalesPage() {
+// campos que el usuario cambió y cuyo cambio gasta el último intento disponible
+function camposUltimoIntento(animal, datos) {
+  if (!animal) return []; // al registrar no hay intentos
+
+  const campos = [
+    { texto: "el nombre", definido: Boolean(animal.nombre), cambio: datos.nombre !== animal.nombre, usados: animal.cambioNombre, maximo: MAX_CAMBIOS },
+    { texto: "el sexo", definido: animal.sexo !== "DESCONOCIDO", cambio: datos.sexo !== animal.sexo, usados: animal.cambioSexo, maximo: MAX_CAMBIOS },
+    { texto: "el número de chip", definido: Boolean(animal.numeroChip), cambio: datos.numeroChip !== animal.numeroChip, usados: animal.cambioChip, maximo: MAX_CAMBIOS },
+    { texto: "la fecha de nacimiento", definido: Boolean(animal.fechaNacimiento), cambio: datos.fechaNacimiento !== animal.fechaNacimiento?.slice(0, 10), usados: animal.cambioFechaNacimiento, maximo: MAX_CAMBIOS_FECHA },
+  ];
+
+  // si se pone por primera vez no gasta intentos; usados === maximo-1 le queda solo uno
+  return campos.filter((c) => c.definido && c.cambio && c.usados === c.maximo - 1).map((c) => c.texto);
+}
+
+// cuenta: sesión del personal 
+function AnimalesPage({ cuenta }) {
   const [animales, setAnimales] = useState([]);
   const [especies, setEspecies] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
@@ -138,6 +157,12 @@ function AnimalesPage() {
   const guardar = async (datos) => {
     if (datos.estado === "FALLECIDO" && !window.confirm("¿Seguro? Un animal fallecido no se puede volver a editar, adoptar ni asignar.")) return;
     if (datos.estado === "EXTRAVIADO" && !window.confirm("¿Seguro? Quedará bloqueado hasta marcarlo como encontrado.")) return;
+
+    const ultimos = camposUltimoIntento(animalEditando, datos);
+    if (ultimos.length > 0 && !window.confirm(
+      `¿Seguro que quieres cambiar ${ultimos.join(" y ")}? Es tu último intento: después no se podrá volver a modificar.`
+    )) return;
+
     try {
       if (editandoId) {
         await animalesApi.actualizar(editandoId, datos);
@@ -159,7 +184,7 @@ function AnimalesPage() {
   };
 
   const handleEliminar = async (animal) => {
-    const nombre = animal.nombre || `#${animal.id}`;
+    const nombre = animal.nombre || "este animal sin nombre";
     if (!window.confirm(`¿Eliminar a ${nombre}?`)) return;
 
     try {
@@ -185,8 +210,21 @@ function AnimalesPage() {
   const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
   const maxPeso = PESO_MAXIMO[especieElegida?.nombre] ?? 200;
   const tieneChip = watch("tieneChip");
+  const esEgreso = ["FALLECIDO", "EXTRAVIADO"].includes(watch("estado"));
 
   const animalEditando = animales.find((animal) => animal.id === editandoId);
+
+  // permisos según el rol de la cuenta 
+  const puedeRegistrar = puedeRegistrarAnimales(cuenta); // administrador, trabajador, voluntario
+  const puedeEditar = puedeEditarAnimales(cuenta); // los anteriores, encargado de adopciones
+  const puedeEliminar = puedeEliminarAnimales(cuenta); // solo administrador
+  // el formulario solo le aparece al editar al encargado de adopciones
+  const mostrarFormulario = puedeRegistrar || (puedeEditar && editandoId);
+  // si no puede editar ni eliminar, no se muestra la columna "Acciones"
+  const tieneAcciones = puedeEditar || puedeEliminar;
+  // el usuario sin sesion solo ve animales que siguen en el refugio
+  const animalesVisibles = cuenta ? animales : animales.filter((animal) => !ESTADOS_BLOQUEADOS.includes(animal.estado));
+
   const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
   const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MAX_CAMBIOS;
   const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
@@ -222,7 +260,7 @@ function AnimalesPage() {
         <header className={estilosUI.encabezado}>
           <h1 className={estilosUI.titulo}>🐾 Animales</h1>
           <p className={estilosUI.subtitulo}>
-            Registra y administra los animales del refugio.
+            {cuenta ? "Registra y administra los animales del refugio." : "Conoce a los animales que viven en nuestro refugio."}
           </p>
         </header>
 
@@ -231,14 +269,17 @@ function AnimalesPage() {
             {error}
           </p>
         )}
-       {/*formulario*/}
+
+       {/*formulario solo para quien tiene permiso de registrar o está editando con permiso*/}
+        {mostrarFormulario && (
         <form
           onSubmit={handleSubmit(guardar)}
           noValidate
           className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
         >
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
-            {editandoId ? `Editar animal #${editandoId}` : "Registrar animal"}
+            {/*se muestra nombre del animal*/}
+            {editandoId ? `Editar a ${animalEditando?.nombre || "animal sin nombre"}` : "Registrar animal"}
           </h2>
 
           {/* 1 columna en celular, 2 en tablet, 3 en pantalla grande */}
@@ -320,6 +361,15 @@ function AnimalesPage() {
               </select>
             </Campo>
 
+            {esEgreso && (
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Campo id="motivoEgreso" etiqueta="Motivo del egreso (obligatorio)" error={errors.motivoEgreso}>
+                  <textarea id="motivoEgreso" {...register("motivoEgreso")} rows={2} maxLength={100}
+                    placeholder="Ej: falleció por neumonia / se escapó durante el paseo" className={estiloCampo} />
+                </Campo>
+              </div>
+            )}
+
             <Campo id="fotografiaUrl" etiqueta="URL de fotografía" error={errors.fotografiaUrl}>
               <input id="fotografiaUrl" type="url" {...register("fotografiaUrl")} placeholder="https://..." className={estiloCampo} />
             </Campo>
@@ -380,18 +430,19 @@ function AnimalesPage() {
             )}
           </div>
         </form>
+        )}
 
-        {/* Listado */}
+        {/* Listado público, lo ve cualquiera */}
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
-            Listado {!cargando && <span className="text-base font-normal text-slate-500">({animales.length})</span>}
+            Listado {!cargando && <span className="text-base font-normal text-slate-500">({animalesVisibles.length})</span>}
           </h2>
 
           {cargando ? (
             <p className="text-slate-500">Cargando...</p>
-          ) : animales.length === 0 ? (
+          ) : animalesVisibles.length === 0 ? (
             <p className="rounded-lg bg-slate-50 p-6 text-center text-slate-500">
-              No hay animales registrados.
+              {cuenta ? "No hay animales registrados." : "Por ahora no hay animales en el refugio."}
             </p>
           ) : (
             // overflow-x-auto: en pantallas chicas la tabla se desliza en vez de romper la página
@@ -399,24 +450,22 @@ function AnimalesPage() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
-                    <th className="px-3 py-3">ID</th>
                     <th className="px-3 py-3">Nombre</th>
                     <th className="px-3 py-3">Especie</th>
                     <th className="px-3 py-3">Sexo</th>
                     <th className="px-3 py-3">Fecha Nacimiento</th>
                     <th className="px-3 py-3">Peso (kg)</th>
-                    <th className="px-3 py-3">Estado</th>
-                    <th className="px-3 py-3">Ingreso</th>
-                    <th className="px-3 py-3 text-right">Acciones</th>
+                  {cuenta && <th className="px-3 py-3">Estado</th> }
+                  {cuenta && <th className="px-3 py-3">Ingreso</th> }
+                    {tieneAcciones && <th className="px-3 py-3 text-right">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {animales.map((animal) => (
+                  {animalesVisibles.map((animal) => (
                     <tr
                       key={animal.id}
                       className={`border-b border-slate-100 hover:bg-slate-50 ${editandoId === animal.id ? "bg-emerald-50" : ""}`}
                     >
-                      <td className="px-3 py-3 text-slate-500">{animal.id}</td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-3">
                           {animal.fotografiaUrl ? (
@@ -437,17 +486,19 @@ function AnimalesPage() {
                       <td className="px-3 py-3 capitalize">{formatearEnum(animal.sexo)}</td>
                       <td className="px-3 py-3">{formatearFecha(animal.fechaNacimiento)}</td>
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
+                      {cuenta && (
                       <td className="px-3 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`}
-                        >
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`} >
                           {formatearEnum(animal.estado)}
                         </span>
                       </td>
-                      <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>
-                                           <td className="px-3 py-3">
+                      )}
+                      {cuenta && <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>}
+                      {tieneAcciones && (
+                      <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
-                          {animal.estado === "EXTRAVIADO" ? (
+                          {/* Editar y encontrado requieren permiso de editar*/}
+                          {puedeEditar && (animal.estado === "EXTRAVIADO" ? (
                             <button
                               type="button"
                               onClick={() => handleEncontrado(animal)}
@@ -465,16 +516,20 @@ function AnimalesPage() {
                             >
                               Editar
                             </button>
+                          ))}
+                          {/* Eliminar solo admin*/}
+                          {puedeEliminar && (
+                            <button
+                              type="button"
+                              onClick={() => handleEliminar(animal)}
+                              className="cursor-pointer rounded-md border border-red-200 px-3 py-1 text-red-600 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => handleEliminar(animal)}
-                            className="cursor-pointer rounded-md border border-red-200 px-3 py-1 text-red-600 hover:bg-red-50"
-                          >
-                            Eliminar
-                          </button>
                         </div>
                       </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
