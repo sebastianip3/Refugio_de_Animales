@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import RegistroPage from "./pages/RegistroPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import InicioPage from "./pages/InicioPage.jsx";
+import InicioPublicoPage from "./pages/InicioPublicoPage.jsx";
 import AnimalesPage from "./pages/AnimalesPage.jsx";
 import AdopcionesPage from "./pages/AdopcionesPage.jsx";
 import HistorialPage from "./pages/HistorialPage.jsx";
@@ -29,33 +30,28 @@ const PAGINAS = {
 };
 
 function App() {
-  const [registrado, setRegistrado] = useState(false);
-  const [pagina, setPagina] = useState(import.meta.env.DEV ? "voluntariado" : "inicio");
-  // Cuenta del personal con sesión iniciada; null para los adoptantes
+  // Inicio es la primera página en desarrollo y producción.
+  const [pagina, setPagina] = useState("inicio");
   const [cuenta, setCuenta] = useState(null);
   const [enLogin, setEnLogin] = useState(false);
   const [cargandoSesion, setCargandoSesion] = useState(true);
 
   const volverAlInicio = () => {
     setCuenta(null);
-    setRegistrado(false);
     setEnLogin(false);
     setPagina("inicio");
   };
 
-  // El backend borra la cookie de sesión
   const cerrarSesion = async () => {
-    await cuentasApi.logout().catch(() => { });
+    await cuentasApi.logout().catch(() => {});
     volverAlInicio();
   };
 
-  // JavaScript no puede leer la cookie httpOnly, así que al cargar se pregunta
-  // al backend si hay una sesión abierta (si no la hay, responde 401)
   useEffect(() => {
     cuentasApi
       .perfil()
       .then(setCuenta)
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setCargandoSesion(false));
   }, []);
 
@@ -70,25 +66,18 @@ function App() {
 
   if (cargandoSesion) return <p>Cargando...</p>;
 
-
-  // Página pública de eventos
   if (window.location.pathname === "/eventos") {
     return (
       <div className="min-h-screen bg-slate-50">
         <header className="border-b bg-white px-6 py-4">
-          <a
-            href="/"
-            className="font-medium text-blue-600 hover:underline"
-          >
+          <a href="/" className="font-medium text-blue-600 hover:underline">
             ← Volver al inicio
           </a>
         </header>
-
         <EventosPage cuenta={null} />
       </div>
     );
   }
-
 
   if (enLogin) {
     return (
@@ -96,22 +85,41 @@ function App() {
         onLogin={(cuentaIniciada) => {
           setCuenta(cuentaIniciada);
           setEnLogin(false);
+          setPagina("inicio");
         }}
         onVolver={() => setEnLogin(false)}
       />
     );
   }
 
-  if (!registrado && !cuenta && !import.meta.env.DEV) {
+  // Se conserva el formulario de registro existente, pero ya no se impone
+  // como pantalla inicial. En el ZIP actual es únicamente una demostración.
+  if (!cuenta && pagina === "registro") {
     return (
-      <RegistroPage
-        onRegistro={() => setRegistrado(true)}
-        onIrALogin={() => setEnLogin(true)}
-      />
+      <div>
+        <div className="bg-white px-6 py-3">
+          <button
+            type="button"
+            onClick={() => setPagina("inicio")}
+            className="font-medium text-blue-600 hover:underline"
+          >
+            ← Volver al inicio
+          </button>
+        </div>
+        <RegistroPage
+          onIrALogin={() => {
+            setPagina("inicio");
+            setEnLogin(true);
+          }}
+        />
+      </div>
     );
   }
 
-  const Pagina = PAGINAS[pagina];
+  // Solo el personal con sesión puede ver el tablero con estadísticas.
+  const Pagina = pagina === "inicio" && !cuenta
+    ? InicioPublicoPage
+    : PAGINAS[pagina];
 
   return (
     <Layout
@@ -119,16 +127,14 @@ function App() {
       onNavegar={setPagina}
       cuenta={cuenta}
       onCerrarSesion={cerrarSesion}
-      onIniciarSesion={() => {
-        setRegistrado(false);
-        setEnLogin(true);
-      }}
+      onIniciarSesion={() => setEnLogin(true)}
     >
       {Pagina ? (
         <Pagina
           cuenta={cuenta}
           onNavegar={setPagina}
           onIniciarSesion={() => setEnLogin(true)}
+          onIrARegistro={() => setPagina("registro")}
         />
       ) : (
         <p>Sección en construcción.</p>
