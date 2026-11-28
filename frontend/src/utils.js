@@ -10,6 +10,18 @@ const ROLES_EDITAN_HISTORIAL = ["VETERINARIO", "ADMINISTRADOR"];
 export const puedeEditarHistorial = (cuenta) =>
   Boolean(cuenta && ROLES_EDITAN_HISTORIAL.includes(cuenta.tipo));
 
+// Roles que pueden registrar, editar y eliminar animales 
+const ROLES_REGISTRAN_ANIMALES = ["ADMINISTRADOR", "TRABAJADOR", "VOLUNTARIO"];
+const ROLES_EDITAN_ANIMALES = [...ROLES_REGISTRAN_ANIMALES, "ENCARGADO_ADOPCIONES"];
+
+export const puedeRegistrarAnimales = (cuenta) =>
+  Boolean(cuenta && ROLES_REGISTRAN_ANIMALES.includes(cuenta.tipo));
+
+export const puedeEditarAnimales = (cuenta) =>
+  Boolean(cuenta && ROLES_EDITAN_ANIMALES.includes(cuenta.tipo));
+
+export const puedeEliminarAnimales = (cuenta) => cuenta?.tipo === "ADMINISTRADOR";
+
 // Color de la etiqueta del estado de cada animal (enum EstadoAnimal del backend).
 // Se usa en el historial clínico y en las solicitudes de adopción
 export const ESTILO_ESTADO_ANIMAL = {
