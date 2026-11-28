@@ -7,6 +7,7 @@ import {
   EDAD_MAXIMA, PESO_MAXIMO, MAX_CAMBIOS, MAX_CAMBIOS_FECHA, fechaMinimaNacimiento,
 } from "../schemas/animal.schema.js";
 import { estilosUI } from "../components/EstilosUI.jsx";
+import { puedeRegistrarAnimales, puedeEditarAnimales, puedeEliminarAnimales } from "../utils.js";
 
 const FORMULARIO_VACIO = {
   nombre: "",
@@ -85,7 +86,8 @@ function AvisoIntentos({ definido, usados, campo, maximo = MAX_CAMBIOS }) {
   return <p className="mt-1 text-xs text-slate-500">{texto}</p>;
 }
 
-function AnimalesPage() {
+// cuenta: sesión del personal (null si es un visitante), onIniciarSesion: lleva al login 
+function AnimalesPage({ cuenta, onIniciarSesion }) {
   const [animales, setAnimales] = useState([]);
   const [especies, setEspecies] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
@@ -159,7 +161,7 @@ function AnimalesPage() {
   };
 
   const handleEliminar = async (animal) => {
-    const nombre = animal.nombre || `#${animal.id}`;
+    const nombre = animal.nombre || "este animal sin nombre";
     if (!window.confirm(`¿Eliminar a ${nombre}?`)) return;
 
     try {
@@ -187,6 +189,16 @@ function AnimalesPage() {
   const tieneChip = watch("tieneChip");
 
   const animalEditando = animales.find((animal) => animal.id === editandoId);
+
+  // permisos según el rol de la cuenta 
+  const puedeRegistrar = puedeRegistrarAnimales(cuenta); // administrador, trabajador, voluntario
+  const puedeEditar = puedeEditarAnimales(cuenta); // los anteriores, encargado de adopciones
+  const puedeEliminar = puedeEliminarAnimales(cuenta); // solo administrador
+  // el formulario solo le aparece al editar al encargado de adopciones
+  const mostrarFormulario = puedeRegistrar || (puedeEditar && editandoId);
+  // si no puede editar ni eliminar, no se muestra la columna "Acciones"
+  const tieneAcciones = puedeEditar || puedeEliminar;
+
   const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
   const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MAX_CAMBIOS;
   const opcionesSexo = sexoDefinido ? SEXOS.filter((sexo) => sexo !== "DESCONOCIDO") : SEXOS;
@@ -231,14 +243,26 @@ function AnimalesPage() {
             {error}
           </p>
         )}
-       {/*formulario*/}
+        {/*aviso al usuario sin sesion*/}
+        {!cuenta && (
+          <p className="rounded-lg bg-amber-50 p-4 text-amber-800">
+            Solo el personal del refugio puede registrar y editar animales.{" "}
+            <button type="button" onClick={onIniciarSesion} className="cursor-pointer font-medium underline">
+              Iniciar sesión
+            </button>
+          </p>
+        )}
+
+       {/*formulario solo para quien tiene permiso de registrar o está editando con permiso*/}
+        {mostrarFormulario && (
         <form
           onSubmit={handleSubmit(guardar)}
           noValidate
           className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
         >
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
-            {editandoId ? `Editar animal #${editandoId}` : "Registrar animal"}
+            {/*se muestra nombre del animal*/}
+            {editandoId ? `Editar a ${animalEditando?.nombre || "animal sin nombre"}` : "Registrar animal"}
           </h2>
 
           {/* 1 columna en celular, 2 en tablet, 3 en pantalla grande */}
@@ -380,8 +404,9 @@ function AnimalesPage() {
             )}
           </div>
         </form>
+        )}
 
-        {/* Listado */}
+        {/* Listado público, lo ve cualquiera */}
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
             Listado {!cargando && <span className="text-base font-normal text-slate-500">({animales.length})</span>}
@@ -399,7 +424,6 @@ function AnimalesPage() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
-                    <th className="px-3 py-3">ID</th>
                     <th className="px-3 py-3">Nombre</th>
                     <th className="px-3 py-3">Especie</th>
                     <th className="px-3 py-3">Sexo</th>
@@ -407,7 +431,7 @@ function AnimalesPage() {
                     <th className="px-3 py-3">Peso (kg)</th>
                     <th className="px-3 py-3">Estado</th>
                     <th className="px-3 py-3">Ingreso</th>
-                    <th className="px-3 py-3 text-right">Acciones</th>
+                    {tieneAcciones && <th className="px-3 py-3 text-right">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -416,7 +440,6 @@ function AnimalesPage() {
                       key={animal.id}
                       className={`border-b border-slate-100 hover:bg-slate-50 ${editandoId === animal.id ? "bg-emerald-50" : ""}`}
                     >
-                      <td className="px-3 py-3 text-slate-500">{animal.id}</td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-3">
                           {animal.fotografiaUrl ? (
@@ -445,9 +468,11 @@ function AnimalesPage() {
                         </span>
                       </td>
                       <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>
-                                           <td className="px-3 py-3">
+                      {tieneAcciones && (
+                      <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
-                          {animal.estado === "EXTRAVIADO" ? (
+                          {/* Editar y encontrado requieren permiso de editar*/}
+                          {puedeEditar && (animal.estado === "EXTRAVIADO" ? (
                             <button
                               type="button"
                               onClick={() => handleEncontrado(animal)}
@@ -465,16 +490,20 @@ function AnimalesPage() {
                             >
                               Editar
                             </button>
+                          ))}
+                          {/* Eliminar solo admin*/}
+                          {puedeEliminar && (
+                            <button
+                              type="button"
+                              onClick={() => handleEliminar(animal)}
+                              className="cursor-pointer rounded-md border border-red-200 px-3 py-1 text-red-600 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => handleEliminar(animal)}
-                            className="cursor-pointer rounded-md border border-red-200 px-3 py-1 text-red-600 hover:bg-red-50"
-                          >
-                            Eliminar
-                          </button>
                         </div>
                       </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
