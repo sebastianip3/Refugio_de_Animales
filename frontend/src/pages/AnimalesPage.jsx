@@ -222,6 +222,8 @@ function AnimalesPage({ cuenta }) {
   const mostrarFormulario = puedeRegistrar || (puedeEditar && editandoId);
   // si no puede editar ni eliminar, no se muestra la columna "Acciones"
   const tieneAcciones = puedeEditar || puedeEliminar;
+  // el usuario sin sesion solo ve animales que siguen en el refugio
+  const animalesVisibles = cuenta ? animales : animales.filter((animal) => !ESTADOS_BLOQUEADOS.includes(animal.estado));
 
   const sexoDefinido = animalEditando && animalEditando.sexo !== "DESCONOCIDO";
   const sexoBloqueado = sexoDefinido && animalEditando.cambioSexo >= MAX_CAMBIOS;
@@ -433,14 +435,14 @@ function AnimalesPage({ cuenta }) {
         {/* Listado público, lo ve cualquiera */}
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-slate-800">
-            Listado {!cargando && <span className="text-base font-normal text-slate-500">({animales.length})</span>}
+            Listado {!cargando && <span className="text-base font-normal text-slate-500">({animalesVisibles.length})</span>}
           </h2>
 
           {cargando ? (
             <p className="text-slate-500">Cargando...</p>
-          ) : animales.length === 0 ? (
+          ) : animalesVisibles.length === 0 ? (
             <p className="rounded-lg bg-slate-50 p-6 text-center text-slate-500">
-              No hay animales registrados.
+              {cuenta ? "No hay animales registrados." : "Por ahora no hay animales en el refugio."}
             </p>
           ) : (
             // overflow-x-auto: en pantallas chicas la tabla se desliza en vez de romper la página
@@ -453,13 +455,13 @@ function AnimalesPage({ cuenta }) {
                     <th className="px-3 py-3">Sexo</th>
                     <th className="px-3 py-3">Fecha Nacimiento</th>
                     <th className="px-3 py-3">Peso (kg)</th>
-                    <th className="px-3 py-3">Estado</th>
-                    <th className="px-3 py-3">Ingreso</th>
+                  {cuenta && <th className="px-3 py-3">Estado</th> }
+                  {cuenta && <th className="px-3 py-3">Ingreso</th> }
                     {tieneAcciones && <th className="px-3 py-3 text-right">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {animales.map((animal) => (
+                  {animalesVisibles.map((animal) => (
                     <tr
                       key={animal.id}
                       className={`border-b border-slate-100 hover:bg-slate-50 ${editandoId === animal.id ? "bg-emerald-50" : ""}`}
@@ -484,12 +486,14 @@ function AnimalesPage({ cuenta }) {
                       <td className="px-3 py-3 capitalize">{formatearEnum(animal.sexo)}</td>
                       <td className="px-3 py-3">{formatearFecha(animal.fechaNacimiento)}</td>
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
+                      {cuenta && (
                       <td className="px-3 py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`} >
                           {formatearEnum(animal.estado)}
                         </span>
                       </td>
-                      <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>
+                      )}
+                      {cuenta && <td className="px-3 py-3">{new Date(animal.fechaIngreso).toLocaleDateString("es-CL")}</td>}
                       {tieneAcciones && (
                       <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
