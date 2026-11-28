@@ -103,8 +103,8 @@ function camposUltimoIntento(animal, datos) {
   return campos.filter((c) => c.definido && c.cambio && c.usados === c.maximo - 1).map((c) => c.texto);
 }
 
-// cuenta: sesión del personal (null si es un visitante), onIniciarSesion: lleva al login 
-function AnimalesPage({ cuenta, onIniciarSesion }) {
+// cuenta: sesión del personal 
+function AnimalesPage({ cuenta }) {
   const [animales, setAnimales] = useState([]);
   const [especies, setEspecies] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
@@ -258,22 +258,13 @@ function AnimalesPage({ cuenta, onIniciarSesion }) {
         <header className={estilosUI.encabezado}>
           <h1 className={estilosUI.titulo}>🐾 Animales</h1>
           <p className={estilosUI.subtitulo}>
-            Registra y administra los animales del refugio.
+            {cuenta ? "Registra y administra los animales del refugio." : "Conoce a los animales que viven en nuestro refugio."}
           </p>
         </header>
 
         {error && (
           <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
             {error}
-          </p>
-        )}
-        {/*aviso al usuario sin sesion*/}
-        {!cuenta && (
-          <p className="rounded-lg bg-amber-50 p-4 text-amber-800">
-            Solo el personal del refugio puede registrar y editar animales.{" "}
-            <button type="button" onClick={onIniciarSesion} className="cursor-pointer font-medium underline">
-              Iniciar sesión
-            </button>
           </p>
         )}
 
