@@ -66,10 +66,11 @@ export default function Layout({
           flexDirection: "column",
           bgcolor: FONDO_MENU,
           color: "#ffffff",
-          overflowY: "auto",
+          minHeight: 0,
+          overflow: "hidden",
         }}
       >
-        <Box sx={{ px: 3, py: 3 }}>
+        <Box sx={{ px: 3, py: 3, flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}>
             🐾 Refugio
           </Typography>
@@ -80,33 +81,32 @@ export default function Layout({
 
         <Divider sx={{ borderColor: "#334155" }} />
 
-        <List component="nav" aria-label="Secciones del refugio" sx={{ px: 1.5, py: 2 }}>
-
-
+        <List
+          component="nav"
+          aria-label="Secciones del refugio"
+          sx={{
+            px: 1.5,
+            py: 2,
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            scrollbarWidth: "thin",
+          }}
+        >
           {SECCIONES.filter((seccion) => {
-            // Trabajadores solo para administradores
             if (
               seccion.id === "trabajadores" &&
               cuenta?.tipo !== "ADMINISTRADOR"
             ) {
               return false;
             }
-
-            // Estas secciones requieren iniciar sesión
-            const seccionesPrivadas = [
-              "insumos",
-              "cuidados",
-              "voluntariado",
-            ];
-
+            const seccionesPrivadas = ["insumos", "cuidados", "voluntariado"];
             if (!cuenta && seccionesPrivadas.includes(seccion.id)) {
               return false;
             }
-
             return true;
           }).map((seccion) => (
-
-
             <ListItemButton
               key={seccion.id}
               selected={paginaActual === seccion.id}
@@ -137,15 +137,24 @@ export default function Layout({
           ))}
         </List>
 
-        <Box sx={{ mt: "auto", px: 1.5, py: 2, borderTop: "1px solid #334155" }}>
+        <Box
+          sx={{
+            flexShrink: 0,
+            px: 1.5,
+            py: 2,
+            borderTop: "1px solid #334155",
+            bgcolor: FONDO_MENU,
+          }}
+        >
           {cuenta ? (
-            <>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <ListItemButton
                 selected={paginaActual === "perfil"}
                 onClick={() => navegar("perfil")}
                 sx={{
+                  flex: 1,
+                  minWidth: 0,
                   borderRadius: 2,
-                  mb: 0.5,
                   alignItems: "flex-start",
                   flexDirection: "column",
                   color: "#ffffff",
@@ -154,24 +163,47 @@ export default function Layout({
                   "&.Mui-selected:hover": { bgcolor: "#1d4ed8" },
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 700, width: "100%" }}>
                   👤 {nombreCuenta}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "#cbd5e1", mt: 0.5 }}>
+                <Typography variant="caption" noWrap sx={{ color: "#cbd5e1", mt: 0.5, width: "100%" }}>
                   {formatearEnum(cuenta.tipo)} · Mi perfil
                 </Typography>
               </ListItemButton>
-              <ListItemButton
+
+              <IconButton
+                type="button"
                 onClick={cerrarSesion}
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
                 sx={{
+                  width: 46,
+                  height: 46,
+                  flexShrink: 0,
                   borderRadius: 2,
-                  color: COLOR_SECUNDARIO,
-                  "&:hover": { bgcolor: "#1e293b", color: "#ffffff" },
+                  bgcolor: "#7f1d1d",
+                  color: "#fecaca",
+                  border: "1px solid #b91c1c",
+                  "&:hover": { bgcolor: "#dc2626", color: "#ffffff" },
+                  "&:focus-visible": { outline: "2px solid #fca5a5", outlineOffset: 2 },
                 }}
               >
-                <ListItemText primary="Cerrar sesión" primaryTypographyProps={{ fontSize: "0.95rem" }} />
-              </ListItemButton>
-            </>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2v10" />
+                  <path d="M6.2 5.8a9 9 0 1 0 11.6 0" />
+                </svg>
+              </IconButton>
+            </Box>
           ) : (
             <ListItemButton
               onClick={() => {
@@ -198,6 +230,9 @@ export default function Layout({
       boxSizing: "border-box",
       bgcolor: FONDO_MENU,
       borderRight: "none",
+      height: "100dvh",
+      maxHeight: "100dvh",
+      overflow: "hidden",
     },
   };
 
