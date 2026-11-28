@@ -172,7 +172,7 @@ export async function registrarResultadoVisita(req, res) {
     if (!id || !visitaId) return res.status(400).json({ message: 'ID inválido' });
 
     const data = resultadoVisitaSchema.parse(req.body);
-    const visita = await adopcionService.registrarResultadoVisita(id, visitaId, data);
+    const visita = await adopcionService.registrarResultadoVisita(id, visitaId, data, req.cuenta);
     res.json(visita);
   } catch (error) {
     manejarError(res, error);

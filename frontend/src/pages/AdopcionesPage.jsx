@@ -1023,7 +1023,8 @@ function AdopcionesPage({ cuenta }) {
 
   const animalesEnProceso = new Set(idsEnProceso);
 
-  const animalesDisponibles = animales.filter((animal) => animal.estado !== "ADOPTADO");
+  // Solo se pueden elegir animales disponibles para adopción
+  const animalesDisponibles = animales.filter((animal) => animal.estado === "ADOPTABLE");
 
   const animalElegido = animales.find((animal) => String(animal.id) === watch("animalId"));
 

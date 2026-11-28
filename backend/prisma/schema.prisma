@@ -152,6 +152,11 @@ model Cuenta {
   disponibilidadesVoluntario DisponibilidadVoluntario[]
   turnosVoluntario           TurnoVoluntario[]
   registrosClinicos          RegistroClinico[]
+  // Acciones del encargado de adopciones (o del administrador)
+  adopcionesEvaluadas        Adopcion[]       @relation("AdopcionesEvaluadas")
+  visitasAgendadas           VisitaAdopcion[] @relation("VisitasAgendadas")
+  visitasCanceladas          VisitaAdopcion[] @relation("VisitasCanceladas")
+  visitasRegistradas         VisitaAdopcion[] @relation("VisitasRegistradas")
 
   @@index([tipo, disponibleCuidado])
   @@map("cuentas")
@@ -270,10 +275,17 @@ model Adopcion {
 
   visitas VisitaAdopcion[]
 
+  // Encargado que hizo el último cambio de estado (pasar a revisión, aprobar o rechazar) y cuándo.
+  // Si la cuenta se elimina, la adopción se conserva sin encargado
+  evaluadaPorId   Int?
+  evaluadaPor     Cuenta?   @relation("AdopcionesEvaluadas", fields: [evaluadaPorId], references: [id], onDelete: SetNull)
+  fechaEvaluacion DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([animalId, estado])
+  @@index([evaluadaPorId])
   @@map("adopciones")
 }
 
@@ -292,7 +304,19 @@ model VisitaAdopcion {
   adopcionId Int
   adopcion   Adopcion @relation(fields: [adopcionId], references: [id], onDelete: Restrict)
 
+  // Encargados que agendaron, cancelaron y registraron el resultado de la visita.
+  // Si la cuenta se elimina, la visita se conserva sin encargado
+  agendadaPorId   Int?
+  agendadaPor     Cuenta? @relation("VisitasAgendadas", fields: [agendadaPorId], references: [id], onDelete: SetNull)
+  canceladaPorId  Int?
+  canceladaPor    Cuenta? @relation("VisitasCanceladas", fields: [canceladaPorId], references: [id], onDelete: SetNull)
+  registradaPorId Int?
+  registradaPor   Cuenta? @relation("VisitasRegistradas", fields: [registradaPorId], references: [id], onDelete: SetNull)
+
   @@index([adopcionId, fecha])
+  @@index([agendadaPorId])
+  @@index([canceladaPorId])
+  @@index([registradaPorId])
   @@map("visitas_adopcion")
 }
 

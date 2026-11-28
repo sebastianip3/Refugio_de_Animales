@@ -12,6 +12,9 @@ import {
 // Serializable evita que dos solicitudes simultáneas pasen la verificación a la vez
 const TX_OPCIONES = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
 
+// Id del encargado que hace la acción, para guardar quién la hizo (null si no hay sesión)
+const idEncargado = (encargado) => encargado?.id ?? null;
+
 // Al pasar a estos estados se avisa al adoptante por correo
 const ESTADOS_NOTIFICADOS = ['APROBADA', 'RECHAZADA'];
 
@@ -51,7 +54,8 @@ export async function crearAdopcion(data) {
   const adopcion = await prisma.$transaction(async (tx) => {
     const animal = await tx.animal.findUnique({ where: { id: data.animalId } });
     if (!animal) throw new AppError(404, 'Animal no encontrado');
-    if (animal.estado === 'ADOPTADO') throw new AppError(409, 'El animal ya fue adoptado');
+    // Solo se puede postular a un animal ADOPTABLE (ciclo: ADOPTABLE → EN_ADOPCION → ADOPTADO)
+    if (animal.estado !== 'ADOPTABLE') throw new AppError(409, 'El animal no está disponible para adopción');
 
     const enProceso = await tx.adopcion.findFirst({
       where: { animalId: data.animalId, estado: { in: ESTADOS_EN_PROCESO } },
@@ -70,6 +74,9 @@ export async function crearAdopcion(data) {
           : 'Este adoptante ya tiene una solicitud de adopción en proceso'
       );
     }
+
+    // mientras se revisa la solicitud, nadie más puede postular a este animal
+    await tx.animal.update({ where: { id: data.animalId }, data: { estado: 'EN_ADOPCION' } });
 
     return tx.adopcion.create({ data, include: INCLUDE_ANIMAL });
   }, TX_OPCIONES);
@@ -139,9 +146,18 @@ export async function actualizarAdopcion(id, data, encargado) {
           data: { estado: 'ADOPTADO', fechaEgreso: new Date(), motivoEgreso: 'Adoptado' },
         });
       }
+      // rechazada: el animal vuelve a estar disponible
+      if (data.estado === 'RECHAZADA') {
+        await tx.animal.update({ where: { id: actual.animalId }, data: { estado: 'ADOPTABLE' } });
+      }
     }
 
-    return tx.adopcion.update({ where: { id }, data, include: { animal: true } });
+    // Al cambiar el estado se guarda qué encargado lo hizo y cuándo
+    const datos = cambioEstado
+      ? { ...data, evaluadaPorId: idEncargado(encargado), fechaEvaluacion: new Date() }
+      : data;
+
+    return tx.adopcion.update({ where: { id }, data: datos, include: { animal: true } });
   }, TX_OPCIONES);
 
   if (!cambioEstado || !ESTADOS_NOTIFICADOS.includes(adopcion.estado)) return adopcion;
@@ -276,7 +292,9 @@ export async function agendarVisita(adopcionId, data, encargado) {
       );
     }
 
-    const visita = await tx.visitaAdopcion.create({ data: { ...data, adopcionId } });
+    const visita = await tx.visitaAdopcion.create({
+      data: { ...data, adopcionId, agendadaPorId: idEncargado(encargado) },
+    });
     return { adopcion, visita };
   }, TX_OPCIONES);
 
@@ -299,7 +317,7 @@ export async function cancelarVisita(adopcionId, visitaId, encargado) {
 
   const cancelada = await prisma.visitaAdopcion.update({
     where: { id: visitaId },
-    data: { estado: 'CANCELADA' },
+    data: { estado: 'CANCELADA', canceladaPorId: idEncargado(encargado) },
   });
 
   return avisarVisita(visita.adopcion, cancelada, encargado);
@@ -315,7 +333,7 @@ function inicioVisita(visita) {
 
 // Cuando llega la hora de la visita, el encargado registra cómo encontró al animal.
 // Solo se registra una visita agendada (no cancelada ni ya registrada) cuya hora ya llegó
-export async function registrarResultadoVisita(adopcionId, visitaId, data) {
+export async function registrarResultadoVisita(adopcionId, visitaId, data, encargado) {
   const visita = await prisma.visitaAdopcion.findFirst({ where: { id: visitaId, adopcionId } });
   if (!visita) throw new AppError(404, 'Visita no encontrada');
   if (visita.estado === 'CANCELADA') throw new AppError(409, 'La visita está cancelada');
@@ -327,7 +345,7 @@ export async function registrarResultadoVisita(adopcionId, visitaId, data) {
 
   return prisma.visitaAdopcion.update({
     where: { id: visitaId },
-    data: { ...data, estado: 'REALIZADA' },
+    data: { ...data, estado: 'REALIZADA', registradaPorId: idEncargado(encargado) },
   });
 }
 
@@ -350,18 +368,26 @@ export async function rechazarAdopcionTrasVisita(adopcionId, visitaId, encargado
     }
 
     const motivo = `Adopción rechazada tras la visita del ${formatearDia(visita.fecha)}: ${visita.observaciones}`;
-    await tx.adopcion.update({ where: { id: adopcionId }, data: { estado: 'RECHAZADA', observaciones: motivo } });
+    await tx.adopcion.update({
+      where: { id: adopcionId },
+      data: {
+        estado: 'RECHAZADA',
+        observaciones: motivo,
+        evaluadaPorId: idEncargado(encargado),
+        fechaEvaluacion: new Date(),
+      },
+    });
 
     // El animal vuelve al refugio y queda disponible para una nueva adopción
     await tx.animal.update({
       where: { id: visita.adopcion.animalId },
-      data: { estado: 'EN_ADOPCION', fechaEgreso: null, motivoEgreso: null },
+      data: { estado: 'ADOPTABLE', fechaEgreso: null, motivoEgreso: null },
     });
 
     // Las visitas que quedaban agendadas ya no se harán
     await tx.visitaAdopcion.updateMany({
       where: { adopcionId, estado: 'AGENDADA' },
-      data: { estado: 'CANCELADA' },
+      data: { estado: 'CANCELADA', canceladaPorId: idEncargado(encargado) },
     });
 
     return { visita, adopcion: { ...visita.adopcion, observaciones: visita.observaciones } };
