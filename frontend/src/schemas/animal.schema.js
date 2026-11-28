@@ -68,5 +68,9 @@ export const animalFormSchema = (nombreEspecie) => {
       error: "El chip debe tener 15 digitos",
       path: ["numeroChip"],
     })
+    .refine((datos) => !["FALLECIDO", "EXTRAVIADO"].includes(datos.estado) || (datos.motivoEgreso?.length ?? 0) >= 5, {
+      error: "Debe escribir el motivo (minimo 5 caracteres)",
+      path: ["motivoEgreso"],
+    })
     .transform((datos) => ({ ...datos, numeroChip: datos.tieneChip ? datos.numeroChip : null }));
 };

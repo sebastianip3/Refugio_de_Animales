@@ -85,7 +85,22 @@ function AvisoIntentos({ definido, usados, campo, maximo = MAX_CAMBIOS }) {
   if (!definido) texto = `Definir ${campo} por primera vez no gasta intentos`;
   else if (quedan <= 0) texto = `Ya se cambió ${maximo} ${maximo === 1 ? "vez" : "veces"}, no se puede modificar`;
 
-  return <p className="mt-1 text-xs text-slate-500">{texto}</p>;
+  return <p className="mt-1 text-xs text-slate-500">{texto}</p>; 
+}
+
+// campos que el usuario cambió y cuyo cambio gasta el último intento disponible
+function camposUltimoIntento(animal, datos) {
+  if (!animal) return []; // al registrar no hay intentos
+
+  const campos = [
+    { texto: "el nombre", definido: Boolean(animal.nombre), cambio: datos.nombre !== animal.nombre, usados: animal.cambioNombre, maximo: MAX_CAMBIOS },
+    { texto: "el sexo", definido: animal.sexo !== "DESCONOCIDO", cambio: datos.sexo !== animal.sexo, usados: animal.cambioSexo, maximo: MAX_CAMBIOS },
+    { texto: "el número de chip", definido: Boolean(animal.numeroChip), cambio: datos.numeroChip !== animal.numeroChip, usados: animal.cambioChip, maximo: MAX_CAMBIOS },
+    { texto: "la fecha de nacimiento", definido: Boolean(animal.fechaNacimiento), cambio: datos.fechaNacimiento !== animal.fechaNacimiento?.slice(0, 10), usados: animal.cambioFechaNacimiento, maximo: MAX_CAMBIOS_FECHA },
+  ];
+
+  // si se pone por primera vez no gasta intentos; usados === maximo-1 le queda solo uno
+  return campos.filter((c) => c.definido && c.cambio && c.usados === c.maximo - 1).map((c) => c.texto);
 }
 
 // cuenta: sesión del personal (null si es un visitante), onIniciarSesion: lleva al login 
@@ -142,6 +157,12 @@ function AnimalesPage({ cuenta, onIniciarSesion }) {
   const guardar = async (datos) => {
     if (datos.estado === "FALLECIDO" && !window.confirm("¿Seguro? Un animal fallecido no se puede volver a editar, adoptar ni asignar.")) return;
     if (datos.estado === "EXTRAVIADO" && !window.confirm("¿Seguro? Quedará bloqueado hasta marcarlo como encontrado.")) return;
+
+    const ultimos = camposUltimoIntento(animalEditando, datos);
+    if (ultimos.length > 0 && !window.confirm(
+      `¿Seguro que quieres cambiar ${ultimos.join(" y ")}? Es tu último intento: después no se podrá volver a modificar.`
+    )) return;
+
     try {
       if (editandoId) {
         await animalesApi.actualizar(editandoId, datos);
@@ -473,9 +494,7 @@ function AnimalesPage({ cuenta, onIniciarSesion }) {
                       <td className="px-3 py-3">{formatearFecha(animal.fechaNacimiento)}</td>
                       <td className="px-3 py-3">{animal.peso ?? "—"}</td>
                       <td className="px-3 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`}
-                        >
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${COLOR_ESTADO[animal.estado] ?? ""}`} >
                           {formatearEnum(animal.estado)}
                         </span>
                       </td>
