@@ -62,6 +62,7 @@ export const animalFormSchema = (nombreEspecie) => {
       .transform((valor) => valor || null),
     estadoGeneral: z.string().trim().max(300, "Maximo 300 caracteres").transform((valor) => valor || null),
     observaciones: z.string().trim().max(300, "Maximo 300 caracteres").transform((valor) => valor || null),
+    motivoEgreso: z.string().trim().max(100, "Maximo 100 caracteres").transform((valor) => valor || null),
   })
     .refine((datos) => !datos.tieneChip || /^\d{15}$/.test(datos.numeroChip), {
       error: "El chip debe tener 15 digitos",

@@ -21,6 +21,7 @@ const FORMULARIO_VACIO = {
   fotografiaUrl: "",
   estadoGeneral: "",
   observaciones: "",
+  motivoEgreso: "",
 };
 
 const formatearEnum = (valor) => valor.replaceAll("_", " ").toLowerCase();
@@ -43,6 +44,7 @@ function aFormulario(animal) {
     fotografiaUrl: animal.fotografiaUrl ?? "",
     estadoGeneral: animal.estadoGeneral ?? "",
     observaciones: animal.observaciones ?? "",
+    motivoEgreso: animal.motivoEgreso ?? "",
   };
 }
 
@@ -187,6 +189,7 @@ function AnimalesPage({ cuenta, onIniciarSesion }) {
   const minNacimiento = fechaMinimaNacimiento(especieElegida?.nombre);
   const maxPeso = PESO_MAXIMO[especieElegida?.nombre] ?? 200;
   const tieneChip = watch("tieneChip");
+  const esEgreso = ["FALLECIDO", "EXTRAVIADO"].includes(watch("estado"));
 
   const animalEditando = animales.find((animal) => animal.id === editandoId);
 
@@ -343,6 +346,15 @@ function AnimalesPage({ cuenta, onIniciarSesion }) {
                 ))}
               </select>
             </Campo>
+
+            {esEgreso && (
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Campo id="motivoEgreso" etiqueta="Motivo del egreso (obligatorio)" error={errors.motivoEgreso}>
+                  <textarea id="motivoEgreso" {...register("motivoEgreso")} rows={2} maxLength={100}
+                    placeholder="Ej: falleció por neumonia / se escapó durante el paseo" className={estiloCampo} />
+                </Campo>
+              </div>
+            )}
 
             <Campo id="fotografiaUrl" etiqueta="URL de fotografía" error={errors.fotografiaUrl}>
               <input id="fotografiaUrl" type="url" {...register("fotografiaUrl")} placeholder="https://..." className={estiloCampo} />
