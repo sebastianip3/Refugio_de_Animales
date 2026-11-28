@@ -81,10 +81,32 @@ export default function Layout({
         <Divider sx={{ borderColor: "#334155" }} />
 
         <List component="nav" aria-label="Secciones del refugio" sx={{ px: 1.5, py: 2 }}>
-          {SECCIONES.filter(
-            (seccion) =>
-              seccion.id !== "trabajadores" || cuenta?.tipo === "ADMINISTRADOR",
-          ).map((seccion) => (
+
+
+          {SECCIONES.filter((seccion) => {
+            // Trabajadores solo para administradores
+            if (
+              seccion.id === "trabajadores" &&
+              cuenta?.tipo !== "ADMINISTRADOR"
+            ) {
+              return false;
+            }
+
+            // Estas secciones requieren iniciar sesión
+            const seccionesPrivadas = [
+              "insumos",
+              "cuidados",
+              "voluntariado",
+            ];
+
+            if (!cuenta && seccionesPrivadas.includes(seccion.id)) {
+              return false;
+            }
+
+            return true;
+          }).map((seccion) => (
+
+
             <ListItemButton
               key={seccion.id}
               selected={paginaActual === seccion.id}
