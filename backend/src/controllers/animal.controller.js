@@ -45,7 +45,7 @@ export async function listarAnimales(req, res) {
       if (!filtros.especieId) return res.status(400).json({ message: 'especieId inválido' });
     }
 
-    const animales = await animalService.listarAnimales(filtros);
+    const animales = await animalService.listarAnimales(filtros, Boolean(req.cuenta));
     res.json(animales);
   } catch (error) {
     manejarError(res, error);
@@ -57,7 +57,7 @@ export async function obtenerAnimal(req, res) {
     const id = parseId(req.params.id);
     if (!id) return res.status(400).json({ message: 'ID inválido' });
 
-    const animal = await animalService.obtenerAnimal(id);
+    const animal = await animalService.obtenerAnimal(id, Boolean(req.cuenta));
     res.json(animal);
   } catch (error) {
     manejarError(res, error);

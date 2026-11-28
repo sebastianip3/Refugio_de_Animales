@@ -11,6 +11,18 @@ const PESO_MAXIMO = { Perro: 200, Gato: 25 };
 const MAX_CAMBIOS = 2;
 const MAX_CAMBIOS_FECHA = 1;
 
+// lo que ve un visitante sin sesión
+const DATOS_PUBLICOS = {
+  id: true,
+  nombre: true,
+  especie: true,
+  sexo: true,
+  fechaNacimiento: true,
+  peso: true,
+  fotografiaUrl: true,
+  estado: true,
+};
+
 // la fecha de nacimiento no puede ser futura ni superar la edad máxima de su especie
 async function validarFechaNacimiento(especieId, fechaNacimiento) {
   if (!fechaNacimiento) return;
@@ -46,17 +58,37 @@ async function validarPeso(especieId, peso) {
 }
 
 // filtros: { estado?, especieId? }, ya validados por el controller
-export function listarAnimales(filtros = {}) {
+// esPersonal: true si hay sesión; el visitante solo ve los que siguen en el refugio
+export function listarAnimales(filtros = {}, esPersonal = false) {
+  if (esPersonal){
   return prisma.animal.findMany({
     where: filtros,
     include: { especie: true },
     orderBy: { fechaIngreso: 'desc' },
   });
+  }
+
+  return prisma.animal.findMany({
+    where: { ...filtros, NOT: {estado: {in: ESTADOS_BLOQUEADOS} } },
+    select: DATOS_PUBLICOS,
+    orderBy: {fechaIngreso: 'desc'},
+  });
+
 }
 
-export async function obtenerAnimal(id) {
-  const animal = await prisma.animal.findUnique({ where: { id }, include: { especie: true } });
-  if (!animal) throw new AppError(404, 'Animal no encontrado');
+// esPersonal = true por defecto: actualizar, eliminar y encontrado usan esta función y necesitan todos los datos
+export async function obtenerAnimal(id, esPersonal = true) {
+   if (esPersonal) {
+    const animal = await prisma.animal.findUnique({ where: { id }, include: { especie: true } });
+    if (!animal) throw new AppError(404, 'Animal no encontrado');
+    return animal;
+  }
+
+  const animal = await prisma.animal.findUnique({ where: { id }, select: DATOS_PUBLICOS });
+  // para el visitante, un animal que ya no está en el refugio es como si no existiera
+  if (!animal || ESTADOS_BLOQUEADOS.includes(animal.estado)) {
+    throw new AppError(404, 'Animal no encontrado');
+  }
   return animal;
 }
 

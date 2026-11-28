@@ -47,3 +47,21 @@ export function autorizar(...tipos) {
     next();
   };
 }
+
+// Igual que autenticar, pero no obliga a tener sesión.
+// Si la sesión es válida deja la cuenta en req.cuenta; si no, sigue como visitante.
+export async function autenticarOpcional(req, res, next) {
+  const token = req.cookies?.[COOKIE_SESION];
+  if (!token || !JWT_SECRET) return next();
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    req.cuenta = await prisma.cuenta.findUnique({
+      where: { id: Number(payload.sub) },
+      omit: { contrasenaHash: true },
+    });
+  } catch {
+    // token vencido o inválido: se trata como visitante, no como error
+  }
+  next();
+}

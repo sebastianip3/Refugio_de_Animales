@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { autenticar, autorizar } from '../middleware/auth.middleware.js';
+import { autenticar, autorizar, autenticarOpcional } from '../middleware/auth.middleware.js';
 import {
   listarAnimales,
   obtenerAnimal,
@@ -15,8 +15,8 @@ const permisoEliminar = [autenticar, autorizar('ADMINISTRADOR')];
 
 const router = Router();
 
-router.get('/', listarAnimales);
-router.get('/:id', obtenerAnimal);
+router.get('/', autenticarOpcional, listarAnimales);
+router.get('/:id', autenticarOpcional, obtenerAnimal);
 router.post('/', permisoCrear, crearAnimal);
 router.patch('/:id/encontrado', permisoActualizar, marcarEncontrado);
 router.patch('/:id', permisoActualizar, actualizarAnimal);
