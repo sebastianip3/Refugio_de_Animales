@@ -152,17 +152,22 @@ export async function actualizarAnimal(id, data) {
 
   if (data.tieneChip === false) data.numeroChip = null;
 
+  // el motivo solo se guarda al registrar un egreso; en cualquier otra edición se ignora
+  if (!ESTADOS_EGRESO.includes(data.estado)) delete data.motivoEgreso;
+
   // fallecido o extraviado sale del refugio y se libera todo lo que tenía pendiente
   if (ESTADOS_EGRESO.includes(data.estado) && data.estado !== actual.estado) {
     const ahora = new Date();
     data.fechaEgreso = ahora;
-    data.motivoEgreso = data.estado === 'FALLECIDO' ? 'Fallecido' : 'Extraviado';
+    if (!data.motivoEgreso) {
+      throw new AppError(400, 'Debe escribir el motivo de egreso');
+    }
 
     const [, , , animal] = await prisma.$transaction([
       // las solicitudes en curso se rechazan
       prisma.adopcion.updateMany({
         where: { animalId: id, estado: { in: ['PENDIENTE', 'EN_REVISION'] } },
-        data: { estado: 'RECHAZADA', observaciones: `El animal fue registrado como ${data.motivoEgreso.toLowerCase()}` },
+        data: { estado: 'RECHAZADA', observaciones: `El animal fue registrado como ${data.estado.toLowerCase()}: ${data.motivoEgreso}` },
       }),
       // los cuidados futuros se borran y los que están en curso terminan hoy
       prisma.cuidadoAnimal.deleteMany({ where: { animalId: id, fechaInicio: { gt: ahora } } }),
@@ -193,7 +198,7 @@ export async function marcarEncontrado(id) {
 }
 
 export async function eliminarAnimal(id){
-  await obtenerAnimal(id);
+  const actual = await obtenerAnimal(id);
 
   if (ESTADOS_EGRESO.includes(actual.estado)) {
     throw new AppError(409, 'Un animal fallecido o extraviado queda como registro y no se puede eliminar')

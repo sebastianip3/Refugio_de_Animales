@@ -31,8 +31,7 @@ const animalEsquema = z.object({
   numeroChip: z.string().trim().regex(/^\d{15}$/, 'El chip debe tener 15 dígitos').nullish(),
   observaciones: z.string().trim().max(300, 'Maximo 300 caracteres').nullish(),
   fechaIngreso: z.coerce.date().optional(),
-  fechaEgreso: z.coerce.date().nullish(),
-  motivoEgreso: z.string().trim().max(100).nullish(),
+  motivoEgreso: z.string().trim().min(2, 'el motivo debe tener al menos 5 caracteres').max(100).nullish(),
 });
 
 // si tiene chip entonces el numero es obligatorio
