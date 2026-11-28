@@ -17,8 +17,13 @@ function EventosPage({ cuenta }) {
 
     let activo = true;
 
-    esterilizacionApi
-      .listarJornadasDisponibles()
+    // Si todavía no se integró la consulta pública ampliada,
+    // usamos la lista de jornadas con inscripciones abiertas.
+    const listarPublicas =
+      esterilizacionApi.listarJornadasPublicas ??
+      esterilizacionApi.listarJornadasDisponibles;
+
+    listarPublicas()
       .then((datos) => {
         if (activo) {
           setJornadas(Array.isArray(datos) ? datos : []);
@@ -91,39 +96,61 @@ function EventosPage({ cuenta }) {
               )}
 
               <div className="grid gap-4 md:grid-cols-2">
-                {jornadas.map((jornada) => (
-                  <article
-                    key={jornada.id}
-                    className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-                  >
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                      Esterilización
-                    </span>
+                {jornadas.map((jornada) => {
+                  const puedeInscribirse =
+                    jornada.activa && Number(jornada.cuposDisponibles) > 0;
 
-                    <h3 className="mt-4 text-xl font-bold text-slate-800">
-                      {jornada.nombre}
-                    </h3>
-
-                    <p className="mt-3 text-slate-600">
-                      📅 {formatearFecha(jornada.fecha)}
-                    </p>
-
-                    <p className="mt-2 text-slate-600">
-                      📍 {jornada.lugar}, {jornada.comuna}
-                    </p>
-
-                    <p className="mt-2 text-slate-600">
-                      Cupos disponibles: {jornada.cuposDisponibles}
-                    </p>
-
-                    <a
-                      href="/inscripcion-esterilizacion"
-                      className="mt-5 inline-block rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                  return (
+                    <article
+                      key={jornada.id}
+                      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
                     >
-                      Inscribirme
-                    </a>
-                  </article>
-                ))}
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-semibold text-slate-800">
+                            {jornada.nombre}
+                          </h3>
+                          <p className="mt-2 text-slate-600">
+                            📅 {formatearFecha(jornada.fecha)}
+                          </p>
+                          <p className="mt-1 text-slate-600">
+                            📍 {jornada.lugar}, {jornada.comuna}
+                            {jornada.sector ? ` (${jornada.sector})` : ""}
+                          </p>
+                        </div>
+
+                        <img
+                          src="/refugioAnimales.jpg"
+                          alt="Logo del Refugio de Animales"
+                          className="w-24 shrink-0 rounded-lg object-contain"
+                        />
+                      </div>
+
+                      {jornada.descripcion?.trim() && (
+                        <p className="mt-3 whitespace-pre-line text-slate-600">
+                          {jornada.descripcion}
+                        </p>
+                      )}
+
+                      <p className="mt-3 font-medium text-slate-700">
+                        Cupos disponibles: {jornada.cuposDisponibles}
+                      </p>
+
+                      {puedeInscribirse ? (
+                        <a
+                          href={`/inscripcion-esterilizacion?jornada=${encodeURIComponent(jornada.id)}`}
+                          className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+                        >
+                          Inscribirme
+                        </a>
+                      ) : (
+                        <p className="mt-4 text-sm font-semibold text-amber-700">
+                          {jornada.activa ? "Sin cupos disponibles" : "Inscripciones cerradas"}
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             </>
           )}
